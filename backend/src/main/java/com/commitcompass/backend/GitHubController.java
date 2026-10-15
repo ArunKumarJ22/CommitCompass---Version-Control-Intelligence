@@ -46,6 +46,26 @@ public class GitHubController {
         return ResponseEntity.ok(commits);
     }
 
+    // Fetch details for one specific commit
+    @GetMapping("/api/github/commits/details")
+    public ResponseEntity<?> getCommitDetails(
+            @RequestParam String owner,
+            @RequestParam String repo,
+            @RequestParam String sha
+    ) {
+        if (hasInvalidInput(owner, repo)
+                || sha == null
+                || sha.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body("Owner, repository, and commit SHA must not be blank.");
+        }
+
+        JsonNode details =
+                gitHubService.getCommitDetails(owner, repo, sha);
+
+        return ResponseEntity.ok(details);
+    }
+
     // Fetch GitHub commits and save new ones in PostgreSQL
     @PostMapping("/api/github/commits/sync")
     public ResponseEntity<?> syncCommits(

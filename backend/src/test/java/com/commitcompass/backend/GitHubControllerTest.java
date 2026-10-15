@@ -75,5 +75,39 @@ class GitHubControllerTest {
 
         verify(gitHubService).getCommits("facebook", "react");
     }   
+    
+    @Test
+    void blankShaIsRejectedForCommitDetails() {
+        ResponseEntity<?> response =
+                controller.getCommitDetails("facebook", "react", " ");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+
+        verifyNoInteractions(gitHubService, commitPersistenceService);
+    }
+
+    @Test
+    void validCommitDetailsReturnSuccessfulResponse() {
+        JsonNode details = mock(JsonNode.class);
+
+        when(gitHubService.getCommitDetails(
+                "facebook",
+                "react",
+                "abc123"
+        )).thenReturn(details);
+
+        ResponseEntity<?> response =
+                controller.getCommitDetails("facebook", "react", "abc123");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(details, response.getBody());
+
+        verify(gitHubService).getCommitDetails(
+                "facebook",
+                "react",
+                "abc123"
+        );
+    }
+
 
 }
