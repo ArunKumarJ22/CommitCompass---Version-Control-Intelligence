@@ -1,6 +1,8 @@
+
 package com.commitcompass.backend;
 
 import tools.jackson.databind.JsonNode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,34 +33,63 @@ public class GitHubController {
 
     // Fetch commits directly from GitHub
     @GetMapping("/api/github/commits")
-    public JsonNode getCommits(
+    public ResponseEntity<?> getCommits(
             @RequestParam String owner,
             @RequestParam String repo
     ) {
-        return gitHubService.getCommits(owner, repo);
+        if (hasInvalidInput(owner, repo)) {
+            return ResponseEntity.badRequest()
+                    .body("Owner and repository names must not be blank.");
+        }
+
+        JsonNode commits = gitHubService.getCommits(owner, repo);
+        return ResponseEntity.ok(commits);
     }
 
     // Fetch GitHub commits and save new ones in PostgreSQL
     @PostMapping("/api/github/commits/sync")
-    public String syncCommits(
+    public ResponseEntity<?> syncCommits(
             @RequestParam String owner,
             @RequestParam String repo
     ) {
+        if (hasInvalidInput(owner, repo)) {
+            return ResponseEntity.badRequest()
+                    .body("Owner and repository names must not be blank.");
+        }
+
         JsonNode githubCommits = gitHubService.getCommits(owner, repo);
 
         int savedCount = commitPersistenceService.saveGitHubCommits(
                 owner, repo, githubCommits
         );
 
-        return "Sync completed. New commits saved: " + savedCount;
+        return ResponseEntity.ok(
+                "Sync completed. New commits saved: " + savedCount
+        );
     }
 
     // Retrieve commits from PostgreSQL
     @GetMapping("/api/github/commits/saved")
-    public List<Commit> getSavedCommits(
+    public ResponseEntity<?> getSavedCommits(
             @RequestParam String owner,
             @RequestParam String repo
     ) {
-        return commitPersistenceService.getSavedCommits(owner, repo);
+        if (hasInvalidInput(owner, repo)) {
+            return ResponseEntity.badRequest()
+                    .body("Owner and repository names must not be blank.");
+        }
+
+        List<Commit> commits =
+                commitPersistenceService.getSavedCommits(owner, repo);
+
+        return ResponseEntity.ok(commits);
+    }
+
+    // Validate repository input in one place
+    private boolean hasInvalidInput(String owner, String repo) {
+        return owner == null
+                || owner.isBlank()
+                || repo == null
+                || repo.isBlank();
     }
 }
