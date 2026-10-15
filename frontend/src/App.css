@@ -785,3 +785,31 @@ input:focus-visible {
   color: #69758a;
 }
 
+
+.source-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-selector button {
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.source-selector button:hover {
+  border-color: #2563eb;
+}
+
+.source-selector button.source-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}

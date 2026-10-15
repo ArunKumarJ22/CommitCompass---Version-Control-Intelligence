@@ -2,20 +2,13 @@
 import { useState } from "react";
 import "./App.css";
 
+
 interface Commit {
   sha: string;
   html_url: string;
-  commit: {
-    message: string;
-    author: {
-      name: string;
-      date: string;
-    } | null;
-  };
-  author: {
-    login: string;
-    avatar_url: string;
-  } | null;
+  message: string;
+  authorName: string;
+  commitDate: string | null;
 }
 
 function App() {
@@ -25,36 +18,65 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activePage, setActivePage] = useState("Overview");
-
+  const [dataSource, setDataSource] = useState<"github" | "database">("github");
+  
   async function fetchCommits() {
-    setLoading(true);
-    setError("");
-    setCommits([]);
+  setLoading(true);
+  setError("");
+  setCommits([]);
 
-    try {
-      const response = await fetch(
-        `http://localhost:8081/api/github/commits?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
-      );
+  try {
+    const endpoint =
+      dataSource === "github"
+        ? "commits"
+        : "commits/saved";
 
-      if (!response.ok) {
-        throw new Error(`Request failed: HTTP ${response.status}`);
-      }
+    const response = await fetch(
+      `http://localhost:8081/api/github/${endpoint}?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+    );
 
-      const data: Commit[] = await response.json();
-
-      if (!Array.isArray(data)) {
-        throw new Error("Unexpected response from the server.");
-      }
-
-      setCommits(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Something went wrong."
-      );
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`Request failed: HTTP ${response.status}`);
     }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      throw new Error("Unexpected response from the server.");
+    }
+
+    const normalizedCommits: Commit[] = data.map((item) => {
+      if (dataSource === "github") {
+        return {
+          sha: item.sha,
+          html_url: item.html_url,
+          message: item.commit?.message ?? "",
+          authorName:
+            item.commit?.author?.name ??
+            item.author?.login ??
+            "Unknown author",
+          commitDate: item.commit?.author?.date ?? null,
+        };
+      }
+
+      return {
+        sha: item.sha,
+        html_url: item.htmlUrl,
+        message: item.message ?? "",
+        authorName: item.authorName ?? "Unknown author",
+        commitDate: item.commitDate ?? null,
+      };
+    });
+
+    setCommits(normalizedCommits);
+  } catch (err) {
+    setError(
+      err instanceof Error ? err.message : "Something went wrong."
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="dashboard">
@@ -133,7 +155,25 @@ function App() {
               <h2>Explore a repository</h2>
               <p>Enter a public GitHub repository to get started.</p>
             </div>
-            <span className="github-label">GitHub API</span>
+            
+            <div className="source-selector">
+              <button
+                type="button"
+                className={dataSource === "github" ? "source-active" : ""}
+                onClick={() => setDataSource("github")}
+              >
+                Live GitHub
+              </button>
+
+              <button
+                type="button"
+                className={dataSource === "database" ? "source-active" : ""}
+                onClick={() => setDataSource("database")}
+              >
+                Saved in PostgreSQL
+              </button>
+            </div>
+
           </div>
 
           <form
@@ -241,15 +281,11 @@ function App() {
             </div>
           )}
 
+          
           {!loading &&
             commits.map((item) => {
-              const author =
-                item.commit.author?.name ??
-                item.author?.login ??
-                "Unknown author";
-
-              const date = item.commit.author?.date
-                ? new Date(item.commit.author.date).toLocaleString()
+              const date = item.commitDate
+                ? new Date(item.commitDate).toLocaleString()
                 : "Date unavailable";
 
               return (
@@ -257,9 +293,10 @@ function App() {
                   <div className="commit-symbol">⑂</div>
 
                   <div className="commit-details">
-                    <h3>{item.commit.message.split("\n")[0]}</h3>
+                    <h3>{item.message.split("\n")[0]}</h3>
+
                     <div className="commit-metadata">
-                      <span>{author}</span>
+                      <span>{item.authorName}</span>
                       <span className="metadata-separator">·</span>
                       <span>{date}</span>
                     </div>
@@ -276,6 +313,8 @@ function App() {
                 </article>
               );
             })}
+
+            
         </section>
 
         <footer className="footer">
