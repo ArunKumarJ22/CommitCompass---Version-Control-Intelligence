@@ -2,12 +2,16 @@
 package com.commitcompass.backend;
 
 import tools.jackson.databind.JsonNode;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -83,6 +87,23 @@ public class GitHubController {
 
         return ResponseEntity.ok(pullRequests);
     }
+    
+        @GetMapping("/api/github/pulls/{pullNumber}/files")
+        public JsonNode getPullRequestFiles(
+                @RequestParam String owner,
+                @RequestParam String repo,
+                @PathVariable int pullNumber
+        ) {
+        if (owner.isBlank() || repo.isBlank() || pullNumber < 1) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Owner, repository, and a valid pull request number are required."
+                );
+        }
+
+        return gitHubService.getPullRequestFiles(owner, repo, pullNumber);
+        }
+
 
 
     // Fetch GitHub commits and save new ones in PostgreSQL

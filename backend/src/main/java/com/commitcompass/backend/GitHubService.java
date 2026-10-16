@@ -1,8 +1,6 @@
-
 package com.commitcompass.backend;
 
 import tools.jackson.databind.JsonNode;
-
 import java.net.http.HttpClient;
 
 import org.springframework.http.HttpStatus;
@@ -12,30 +10,41 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
-
+import org.springframework.web.bind.annotation.PathVariable;
+import com.fasterxml.jackson.databind.JsonNode;
 @Service
 public class GitHubService {
 
     private final RestClient restClient;
 
     
-    public GitHubService() {
-        HttpClient httpClient = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
 
-        JdkClientHttpRequestFactory requestFactory =
-                new JdkClientHttpRequestFactory(httpClient);
+public GitHubService() {
+    HttpClient httpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
 
-        this.restClient = RestClient.builder()
-                .baseUrl("https://api.github.com")
-                .requestFactory(requestFactory)
-                .defaultHeader("Accept", "application/vnd.github+json")
-                .defaultHeader("User-Agent", "CommitCompass")
-                .build();
+    JdkClientHttpRequestFactory requestFactory =
+            new JdkClientHttpRequestFactory(httpClient);
+
+    RestClient.Builder builder = RestClient.builder()
+            .baseUrl("https://api.github.com")
+            .requestFactory(requestFactory)
+            .defaultHeader("Accept", "application/vnd.github+json")
+            .defaultHeader("User-Agent", "CommitCompass");
+
+    String githubToken = System.getenv("GITHUB_TOKEN");
+
+    if (githubToken != null && !githubToken.isBlank()) {
+        builder.defaultHeader(
+                "Authorization",
+                "Bearer " + githubToken
+        );
     }
+
+    this.restClient = builder.build();
+}
+
 
 
     // Fetch the latest 10 commits from a GitHub repository
@@ -189,5 +198,51 @@ public class GitHubService {
             );
         }
     }
+    
+public JsonNode getPullRequestFiles(String owner, String repo, int pullNumber) {
+    String url = "/repos/{owner}/{repo}/pulls/{pullNumber}/files?per_page=100";
+
+    try {
+        return restClient.get()
+                .uri(url, owner, repo, pullNumber)
+                .retrieve()
+                .body(JsonNode.class);
+
+    } catch (RestClientResponseException ex) {
+        int status = ex.getStatusCode().value();
+
+        if (status == 404) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Pull request or repository not found.",
+                    ex
+            );
+        }
+
+        if (status == 403 || status == 429) {
+            throw new ResponseStatusException(
+                    status == 403
+                            ? HttpStatus.FORBIDDEN
+                            : HttpStatus.TOO_MANY_REQUESTS,
+                    "GitHub denied the request or the API rate limit was reached.",
+                    ex
+            );
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.BAD_GATEWAY,
+                "GitHub pull request files request failed with status " + status + ".",
+                ex
+        );
+
+    } catch (ResourceAccessException ex) {
+        throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Cannot connect to GitHub. Try again later.",
+                ex
+        );
+    }
+}
+
 
 }

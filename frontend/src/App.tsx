@@ -1,7 +1,8 @@
 
-import { useState } from "react";
+
 import "./App.css";
 import ReactMarkdown from "react-markdown";
+import { useEffect, useState } from "react";
 
 interface Commit {
   sha: string;
@@ -9,6 +10,12 @@ interface Commit {
   message: string;
   authorName: string;
   commitDate: string | null;
+}
+
+interface RepositoryHistoryItem {
+  owner: string;
+  repo: string;
+  lastExploredAt: string;
 }
 
 interface PullRequest {
@@ -24,6 +31,18 @@ interface PullRequest {
   body: string | null;
 }
 
+interface PullRequestFile {
+  sha: string;
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+  blob_url: string;
+}
+
+
 interface CommitFile {
   filename: string;
   status: string;
@@ -33,6 +52,7 @@ interface CommitFile {
   patch?: string;
 }
 
+
 interface CommitDetails {
   sha: string;
   html_url: string;
@@ -40,8 +60,17 @@ interface CommitDetails {
     message: string;
     author?: {
       name?: string;
+      email?: string;
       date?: string;
     };
+    committer?: {
+      name?: string;
+      date?: string;
+    };
+  };
+  author?: {
+    login?: string;
+    html_url?: string;
   };
   files?: CommitFile[];
   stats?: {
@@ -52,21 +81,39 @@ interface CommitDetails {
 }
 
 
+
 function App() {
   const [owner, setOwner] = useState("microsoft");
   const [repo, setRepo] = useState("vscode");
+  const [dataSource, setDataSource] = useState<"github" | "database">("github");
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [activePage, setActivePage] = useState("Overview");
+
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
   const [pullRequestsError, setPullRequestsError] = useState("");
 
   
-  const [dataSource, setDataSource] = useState<"github" | "database">("github");
-  const [collapsedFiles, setCollapsedFiles] = useState<string[]>([]);
+  const [selectedPullRequest, setSelectedPullRequest] =
+  useState<PullRequest | null>(null);
+
+  const [pullRequestFiles, setPullRequestFiles] =
+  useState<PullRequestFile[]>([]);
+
+  const [pullRequestFilesLoading, setPullRequestFilesLoading] =
+  useState(false);
+
+  const [pullRequestFilesError, setPullRequestFilesError] =
+  useState("");
+  
+  const [prRiskAnalysis, setPrRiskAnalysis] = useState("");
+  const [prRiskLoading, setPrRiskLoading] = useState(false);
+  const [prRiskError, setPrRiskError] = useState("");
+
+
 
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
@@ -81,9 +128,26 @@ function App() {
   const [riskLoading, setRiskLoading] = useState(false);
   const [riskError, setRiskError] = useState("");
 
+  const [repositoryHistory, setRepositoryHistory] = useState<
+  RepositoryHistoryItem[]
+  >(() => {
+  try {
+    const saved = localStorage.getItem("commitcompass-repository-history");
+    return saved ? JSON.parse(saved) as RepositoryHistoryItem[] : [];
+  } catch {
+    return [];
+  }
+  });
 
-  
-  async function fetchCommits() {
+  useEffect(() => {
+    void fetchRepositoryHistory();
+  }, []);
+
+
+  async function fetchCommits(
+    selectedOwner = owner,
+    selectedRepo = repo
+) {
   setLoading(true);
   setError("");
   setCommits([]);
@@ -95,7 +159,7 @@ function App() {
         : "commits/saved";
 
     const response = await fetch(
-      `http://localhost:8081/api/github/${endpoint}?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+      `http://localhost:8081/api/github/${endpoint}?owner=${encodeURIComponent(selectedOwner)}&repo=${encodeURIComponent(selectedRepo)}`
     );
 
     if (!response.ok) {
@@ -132,6 +196,35 @@ function App() {
     });
 
     setCommits(normalizedCommits);
+    await fetch(
+      `http://localhost:8081/api/repositories/history?owner=${encodeURIComponent(owner.trim())}&repo=${encodeURIComponent(repo.trim())}`,
+      { method: "POST" }
+    );
+
+    await fetchRepositoryHistory();
+      const historyItem: RepositoryHistoryItem = {
+      owner: owner.trim(),
+      repo: repo.trim(),
+      lastExploredAt: new Date().toISOString(),
+    };
+
+    setRepositoryHistory((current) => {
+      const updated = [
+        historyItem,
+        ...current.filter(
+          (item) =>
+            item.owner.toLowerCase() !== historyItem.owner.toLowerCase() ||
+            item.repo.toLowerCase() !== historyItem.repo.toLowerCase()
+        ),
+      ].slice(0, 10);
+
+      localStorage.setItem(
+        "commitcompass-repository-history",
+        JSON.stringify(updated)
+      );
+
+      return updated;
+    });
   } catch (err) {
     setError(
       err instanceof Error ? err.message : "Something went wrong."
@@ -147,6 +240,25 @@ function App() {
             : [...current, filename]
         );
       }
+
+      
+    async function fetchRepositoryHistory() {
+      try {
+        const response = await fetch(
+          "http://localhost:8081/api/repositories/history"
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load repository history.");
+        }
+
+        const data: RepositoryHistoryItem[] = await response.json();
+        setRepositoryHistory(data);
+      } catch (err) {
+        console.error("Repository history error:", err);
+      }
+    }
+
   async function fetchPullRequests() {
     setPullRequestsLoading(true);
     setPullRequestsError("");
@@ -182,6 +294,101 @@ function App() {
       setPullRequestsLoading(false);
     }
   }
+  
+  const fetchPullRequestFiles = async (pullRequest: PullRequest) => {
+    setSelectedPullRequest(pullRequest);
+    setPullRequestFiles([]);
+    setPullRequestFilesError("");
+    setPullRequestFilesLoading(true);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8081/api/github/pulls/${pullRequest.number}/files?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+      );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to fetch pull request files.");
+      }
+
+      const files: PullRequestFile[] = await response.json();
+      setPullRequestFiles(files);
+    } catch (error) {
+      setPullRequestFilesError(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while fetching pull request files."
+      );
+    } finally {
+      setPullRequestFilesLoading(false);
+    }
+  };
+
+  
+  async function analyzePullRequestRisk() {
+    if (!selectedPullRequest || pullRequestFiles.length === 0) {
+      setPrRiskError("Select a pull request and load its changed files first.");
+      return;
+    }
+
+    setPrRiskAnalysis("");
+    setPrRiskError("");
+
+    const diff = pullRequestFiles
+      .filter((file) => file.patch)
+      .map((file) => `File: ${file.filename}\n${file.patch}`)
+      .join("\n\n");
+
+    if (!diff.trim()) {
+      setPrRiskError("No text patches are available for this pull request.");
+      return;
+    }
+
+    if (diff.length > 30000) {
+      setPrRiskError(
+        "This pull request's diff is too large to analyze in one request."
+      );
+      return;
+    }
+
+    setPrRiskLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://localhost:8081/api/ai/risk-analysis",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ diff }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? `AI risk analysis failed: HTTP ${response.status}`
+        );
+      }
+
+      if (typeof data.analysis !== "string") {
+        throw new Error("The server returned an invalid risk analysis.");
+      }
+
+      setPrRiskAnalysis(data.analysis);
+    } catch (error) {
+      setPrRiskError(
+        error instanceof Error
+          ? error.message
+          : "Unable to analyze this pull request."
+      );
+    } finally {
+      setPrRiskLoading(false);
+    }
+  }
+
+
+
 
 
   async function fetchCommitDetails(sha: string) {
@@ -491,48 +698,64 @@ function App() {
           </form>
         </section>
 
-        {activePage === "Repositories" && (
+        
+      {activePage === "Repositories" && (
         <section className="history-section">
           <div className="history-heading">
             <div>
-              <h2>Selected repository</h2>
-              <p>
-                Repository currently selected in CommitCompass
-              </p>
+              <h2>Recently explored</h2>
+              <p>Your latest GitHub repository searches</p>
             </div>
+
+            <span className="result-count">
+              {repositoryHistory.length} repositories
+            </span>
           </div>
 
-          <article className="commit-card">
-            <div className="commit-symbol">▤</div>
-
-            <div className="commit-details">
-              <h3>{owner}/{repo}</h3>
+          {repositoryHistory.length === 0 ? (
+            <div className="empty-state">
+              <h3>No repository history yet</h3>
               <p>
-                Explore commits, inspect code changes, and analyze
-                pull requests for this repository.
+                Explore a repository above, and it will appear here.
               </p>
-
-              <div className="repository-actions">
-                <button
-                  className="inspect-button"
-                  type="button"
-                  onClick={() => setActivePage("Commit History")}
-                >
-                  View Commit History
-                </button>
-
-                <button
-                  className="inspect-button"
-                  type="button"
-                  onClick={() => setActivePage("Pull Requests")}
-                >
-                  View Pull Requests
-                </button>
-              </div>
             </div>
-          </article>
+          ) : (
+            repositoryHistory.map((item) => (
+              <article
+                className="commit-card"
+                key={`${item.owner}/${item.repo}`}
+              >
+                <div className="commit-symbol">▤</div>
+
+                <div className="commit-details">
+                  <h3>
+                    {item.owner}/{item.repo}
+                  </h3>
+                  <p>
+                    Last explored:{" "}
+                    {new Date(item.lastExploredAt).toLocaleString()}
+                  </p>
+                </div>
+
+                <button
+                  className="inspect-button"
+                  type="button"
+                  onClick={async () => {
+                  setOwner(item.owner);
+                  setRepo(item.repo);
+                  setActivePage("Overview");
+
+                  await fetchCommits(item.owner, item.repo);
+                }}
+                >
+                  Select repository
+                </button>
+              </article>
+            ))
+          )}
         </section>
       )}
+
 
         <section className="stats-grid"
         style={{ display: activePage === "Overview" ? undefined : "none" }}
@@ -668,11 +891,36 @@ function App() {
 
           {selectedCommit && !detailsLoading && (
             <div className="details-panel">
+              
               <div className="history-heading">
                 <div>
                   <h2>Commit details</h2>
-                  <p>{selectedCommit.commit.message.split("\n")[0]}</p>
+
+                  <p>
+                    {selectedCommit.commit.message.split("\n")[0]}
+                  </p>
+
+                  <div className="commit-metadata">
+                    <span>
+                      Author: {selectedCommit.commit.author?.name ?? "Unknown"}
+                    </span>
+
+                    <span className="metadata-separator">·</span>
+
+                    <span>
+                      {selectedCommit.commit.author?.date
+                        ? new Date(
+                            selectedCommit.commit.author.date
+                          ).toLocaleString()
+                        : "Date unavailable"}
+                    </span>
+                  </div>
+
+                  <p className="commit-sha">
+                    SHA: {selectedCommit.sha}
+                  </p>
                 </div>
+
                 <button
                   className="inspect-button"
                   type="button"
@@ -682,20 +930,32 @@ function App() {
                 </button>
               </div>
 
-              <div className="diff-summary">
-                <span>
-                  {selectedCommit.stats?.total ?? 0} changes
-                </span>
-                <span className="additions">
-                  +{selectedCommit.stats?.additions ?? 0}
-                </span>
-                <span className="deletions">
-                  -{selectedCommit.stats?.deletions ?? 0}
-                </span>
+              
+              <div className="diff-summary diff-summary-cards">
+                <div className="diff-stat">
+                  <span className="diff-stat-label">Files changed</span>
+                  <strong>{selectedCommit.files?.length ?? 0}</strong>
+                </div>
+
+                <div className="diff-stat">
+                  <span className="diff-stat-label">Lines added</span>
+                  <strong className="additions">
+                    +{selectedCommit.stats?.additions ?? 0}
+                  </strong>
+                </div>
+
+                <div className="diff-stat">
+                  <span className="diff-stat-label">Lines removed</span>
+                  <strong className="deletions">
+                    −{selectedCommit.stats?.deletions ?? 0}
+                  </strong>
+                </div>
               </div>
 
+
               
-              <div className="ai-explanation-section">
+              
+              <div className="ai-toolbar">
                 <button
                   className="primary-button"
                   type="button"
@@ -705,61 +965,60 @@ function App() {
                   {aiLoading ? "Analyzing code..." : "Explain with AI"}
                 </button>
 
-                {aiLoading && (
-                  <div className="message-panel" role="status">
-                    AI is analyzing the commit changes. Please wait...
-                  </div>
-                )}
-
-                {aiError && (
-                  <div className="message-panel error-message" role="alert">
-                    <strong>Unable to explain this commit</strong>
-                    <p>{aiError}</p>
-                  </div>
-                )}
-
-                {aiExplanation && (
-                  <article className="ai-explanation-card">
-                    <h3>AI Commit Explanation</h3>
-                    <div className="ai-explanation-text">
-                      <ReactMarkdown>{aiExplanation}</ReactMarkdown>
-                    </div>
-                  </article>
-                )}
-              </div>
-              
-              <div className="ai-explanation-section">
                 <button
-                  className="primary-button"
+                  className="primary-button risk-button"
                   type="button"
                   onClick={() => void analyzeSelectedCommitRisk()}
                   disabled={riskLoading}
                 >
                   {riskLoading ? "Analyzing risk..." : "Analyze Risk"}
                 </button>
-
-                {riskLoading && (
-                  <div className="message-panel" role="status">
-                    Assessing potential risks and regressions...
-                  </div>
-                )}
-
-                {riskError && (
-                  <div className="message-panel error-message" role="alert">
-                    <strong>Risk analysis failed</strong>
-                    <p>{riskError}</p>
-                  </div>
-                )}
-
-                {riskAnalysis && (
-                  <article className="ai-explanation-card">
-                    <h3>AI Risk Analysis</h3>
-                    <div className="ai-explanation-text">
-                      <ReactMarkdown>{riskAnalysis}</ReactMarkdown>
-                    </div>
-                  </article>
-                )}
               </div>
+
+              {aiLoading && (
+                <div className="message-panel" role="status">
+                  AI is analyzing the commit changes. Please wait...
+                </div>
+              )}
+
+              {aiError && (
+                <div className="message-panel error-message" role="alert">
+                  <strong>Unable to explain this commit</strong>
+                  <p>{aiError}</p>
+                </div>
+              )}
+
+              {aiExplanation && (
+                <article className="ai-explanation-card">
+                  <h3>AI Commit Explanation</h3>
+                  <div className="ai-explanation-text">
+                    <ReactMarkdown>{aiExplanation}</ReactMarkdown>
+                  </div>
+                </article>
+              )}
+
+              {riskLoading && (
+                <div className="message-panel" role="status">
+                  Assessing potential risks and regressions...
+                </div>
+              )}
+
+              {riskError && (
+                <div className="message-panel error-message" role="alert">
+                  <strong>Risk analysis failed</strong>
+                  <p>{riskError}</p>
+                </div>
+              )}
+
+              {riskAnalysis && (
+                <article className="ai-explanation-card">
+                  <h3>AI Risk Analysis</h3>
+                  <div className="ai-explanation-text">
+                    <ReactMarkdown>{riskAnalysis}</ReactMarkdown>
+                  </div>
+                </article>
+              )}
+
 
               <h3>Changed files</h3>
 
@@ -893,6 +1152,17 @@ function App() {
                       {new Date(pr.created_at).toLocaleDateString()}
                     </span>
                   </div>
+                   
+                  <button
+                    className="inspect-button"
+                    type="button"
+                    onClick={() => void fetchPullRequestFiles(pr)}
+                  >
+                    {pullRequestFilesLoading && selectedPullRequest?.number === pr.number
+                      ? "Loading files..."
+                      : "View changed files"}
+                  </button>
+
 
                   {pr.body && <p>{pr.body}</p>}
                 </div>
@@ -907,7 +1177,126 @@ function App() {
                 </a>
               </article>
             ))}
+            
+            {selectedPullRequest && (
+              <div className="details-panel">
+                <div className="history-heading">
+                  <div>
+                    <h2>
+                      Changed files — PR #{selectedPullRequest.number}
+                    </h2>
+                    <p>{selectedPullRequest.title}</p>
+                    <div className="ai-toolbar">
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => void analyzePullRequestRisk()}
+                        disabled={prRiskLoading || pullRequestFilesLoading}
+                      >
+                        {prRiskLoading ? "Analyzing PR..." : "Analyze PR Risk with AI"}
+                      </button>
+                    </div>
+
+                    {prRiskLoading && (
+                      <div className="message-panel" role="status">
+                        AI is reviewing the pull request changes...
+                      </div>
+                    )}
+
+                    {prRiskError && (
+                      <div className="message-panel error-message" role="alert">
+                        {prRiskError}
+                      </div>
+                    )}
+
+                    {prRiskAnalysis && (
+                      <article className="ai-explanation-card">
+                        <h3>AI Pull Request Risk Review</h3>
+                        <div className="ai-explanation-text">
+                          <ReactMarkdown>{prRiskAnalysis}</ReactMarkdown>
+                        </div>
+                      </article>
+                    )}
+
+                  </div>
+
+                  <button
+                    className="inspect-button"
+                    type="button"
+                    onClick={() => {
+                      setSelectedPullRequest(null);
+                      setPullRequestFiles([]);
+                      setPullRequestFilesError("");
+                    }}
+                  >
+                    Close files
+                  </button>
+                </div>
+
+                {pullRequestFilesLoading && (
+                  <div className="message-panel" role="status">
+                    Loading changed files...
+                  </div>
+                )}
+
+                {pullRequestFilesError && (
+                  <div className="message-panel error-message" role="alert">
+                    {pullRequestFilesError}
+                  </div>
+                )}
+
+                {!pullRequestFilesLoading &&
+                  !pullRequestFilesError &&
+                  pullRequestFiles.length === 0 && (
+                    <p>No changed files were returned for this pull request.</p>
+                  )}
+
+                {!pullRequestFilesLoading &&
+                  pullRequestFiles.map((file) => (
+                    <article className="file-card" key={file.sha + file.filename}>
+                      <div className="file-heading">
+                        <strong>{file.filename}</strong>
+                        <span>{file.status}</span>
+                      </div>
+
+                      <div className="file-content">
+                        <p>
+                          <span className="additions">+{file.additions}</span>
+                          {" / "}
+                          <span className="deletions">-{file.deletions}</span>
+                          {" lines"}
+                        </p>
+
+                        {file.patch ? (
+                          <pre className="diff-code">
+                            {file.patch.split("\n").map((line, index) => {
+                              const lineClass = line.startsWith("+")
+                                ? "diff-line diff-added"
+                                : line.startsWith("-")
+                                  ? "diff-line diff-removed"
+                                  : line.startsWith("@@")
+                                    ? "diff-line diff-hunk"
+                                    : "diff-line";
+
+                              return (
+                                <span className={lineClass} key={index}>
+                                  {line}
+                                  {"\n"}
+                                </span>
+                              );
+                            })}
+                          </pre>
+                        ) : (
+                          <p>Text diff unavailable for this file.</p>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+              </div>
+            )}
+
           </section>
+          
         )}
 
         <footer className="footer">

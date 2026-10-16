@@ -1137,3 +1137,411 @@ input:focus-visible {
   gap: 10px;
   margin-top: 16px;
 }
+
+
+.commit-sha {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+
+/* Commit details: cleaner, premium developer-tool layout */
+.details-panel {
+  padding: 28px;
+  border: 1px solid #e5eaf2;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+}
+
+.details-panel > .history-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.details-panel > .history-heading h2 {
+  margin: 0 0 10px;
+  color: #172033;
+  text-align: left;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.details-panel > .history-heading p {
+  color: #64748b;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.commit-sha {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* Three separate metric cards */
+.diff-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+  padding: 0;
+  background: transparent;
+}
+
+.diff-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e7ecf3;
+  border-radius: 14px;
+  background: #f8faff;
+}
+
+.diff-stat-label {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.diff-stat strong {
+  color: #172033;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+
+.diff-stat strong.additions {
+  color: #16834a;
+}
+
+.diff-stat strong.deletions {
+  color: #dc3f4f;
+}
+
+/* AI action buttons */
+.ai-explanation-section {
+  margin-top: 24px;
+}
+
+.ai-explanation-section > .primary-button {
+  min-height: 42px;
+  border-radius: 10px;
+}
+
+/* Changed-file cards */
+.file-card {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.file-heading-button {
+  width: 100%;
+  padding: 15px 18px;
+  background: #f8faff;
+  text-align: left;
+  transition: background 160ms ease;
+}
+
+.file-heading-button:hover {
+  background: #eef4ff;
+}
+
+.file-heading-button strong {
+  overflow-wrap: anywhere;
+}
+
+.file-content {
+  padding: 16px;
+}
+
+.diff-code {
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 16px;
+  overflow-x: auto;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-family: "Consolas", "Cascadia Code", monospace;
+  font-size: 12px;
+  line-height: 1.75;
+  tab-size: 2;
+}
+
+.diff-line {
+  display: inline-block;
+  min-width: 100%;
+  white-space: pre;
+}
+
+.diff-added {
+  color: #167342;
+  background: #eaf8ef;
+}
+
+.diff-removed {
+  color: #bd3344;
+  background: #fff0f1;
+}
+
+.diff-hunk {
+  color: #365fc5;
+  background: #edf3ff;
+}
+
+/* Smaller screens */
+@media (max-width: 640px) {
+  .details-panel {
+    padding: 16px;
+  }
+
+  .diff-summary-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .diff-stat {
+    padding: 14px;
+  }
+
+  .details-panel > .history-heading {
+    flex-direction: column;
+  }
+}
+
+
+/* Refined code-review layout */
+.details-panel .ai-explanation-section {
+  margin-top: 16px;
+}
+
+.details-panel > h3 {
+  margin: 28px 0 14px;
+  color: #172033;
+  text-align: left;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.details-panel .file-heading-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.details-panel .file-heading-button > strong {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.details-panel .file-heading-button > span {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #eaf1ff;
+  color: #315bd6;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.details-panel .file-content > p {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.details-panel .diff-code {
+  max-height: 460px;
+  overflow: auto;
+}
+
+.details-panel .ai-explanation-card {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid #e5eaf2;
+  border-radius: 14px;
+  background: #fbfcff;
+}
+
+@media (max-width: 640px) {
+  .details-panel .file-heading-button {
+    align-items: flex-start;
+  }
+
+  .details-panel .ai-explanation-card {
+    padding: 16px;
+  }
+}
+
+/* Compact AI action toolbar */
+.details-panel {
+  --ai-action-gap: 12px;
+}
+
+.details-panel > .ai-explanation-section.ai-action {
+  display: inline-flex;
+  vertical-align: top;
+  margin: 0 12px 20px 0;
+}
+
+.details-panel > .ai-explanation-section.ai-action > .primary-button {
+  margin: 0;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(49, 91, 214, 0.12);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.details-panel > .ai-explanation-section.ai-action > .primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(49, 91, 214, 0.2);
+}
+
+/* Keep results below the toolbar */
+.details-panel > .ai-explanation-section.ai-action > .ai-explanation-card,
+.details-panel > .ai-explanation-section.ai-action > .message-panel {
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .details-panel > .ai-explanation-section.ai-action {
+    display: flex;
+    margin-right: 0;
+  }
+}
+
+
+/* AI action buttons */
+.details-panel > .ai-result-section {
+  display: block;
+  margin: 0;
+}
+
+.details-panel > .ai-result-section:first-of-type {
+  margin-top: 0;
+}
+
+/* Keep the AI buttons side by side */
+.details-panel > .ai-result-section > button.primary-button {
+  margin: 0 12px 20px 0;
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+@media (max-width: 480px) {
+  .details-panel > .ai-result-section > button.primary-button {
+    margin-right: 6px;
+  }
+}
+
+
+/* Shared toolbar for AI actions */
+.details-panel .ai-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.details-panel .ai-toolbar .primary-button {
+  width: auto;
+  grid-column: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 20px;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgb(49 91 214 / 12%);
+}
+
+.details-panel .ai-toolbar .risk-button {
+  border: 1px solid #cdd9f5;
+  background: #fff;
+  color: #315bd6;
+}
+
+.details-panel .ai-toolbar .risk-button:hover:not(:disabled) {
+  background: #eef4ff;
+}
+
+.details-panel .ai-explanation-card {
+  margin-top: 16px;
+}
+
+/* Make code diffs readable and fill the available width */
+.details-panel .diff-code {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  max-height: 480px;
+  margin: 12px 0 0;
+  padding: 12px 0;
+  overflow: auto;
+  border: 1px solid #dce4ef;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-family: Consolas, "Cascadia Code", monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre;
+  text-align: left;
+}
+
+/* Each diff line fills the viewer's width */
+.details-panel .diff-code .diff-line {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: max-content;
+  padding: 0 14px;
+  white-space: pre;
+}
+
+/* Added lines */
+.details-panel .diff-code .diff-added {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Removed lines */
+.details-panel .diff-code .diff-removed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Diff section headers */
+.details-panel .diff-code .diff-hunk {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+/* Keep unchanged lines readable */
+.details-panel .diff-code .diff-line:not(.diff-added):not(.diff-removed):not(.diff-hunk) {
+  color: #334155;
+  background: #f8fafc;
+}
