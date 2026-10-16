@@ -56,6 +56,13 @@
     		<artifactId>postgresql</artifactId>
     		<scope>runtime</scope>
 		</dependency>
+		
+		<dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java</artifactId>
+            <version>4.81.0</version>
+        </dependency>
+
 
 	</dependencies>
 

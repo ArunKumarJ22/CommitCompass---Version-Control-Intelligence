@@ -813,3 +813,218 @@ input:focus-visible {
   border-color: #2563eb;
   color: #ffffff;
 }
+
+
+/* Commit details panel */
+.details-panel {
+  margin-top: 24px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  color: #1e293b;
+  overflow: hidden;
+}
+
+.details-panel h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.details-panel h3 {
+  margin: 24px 0 14px;
+  font-size: 17px;
+}
+
+.details-panel p {
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.details-panel .history-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.diff-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.additions {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.deletions {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.file-card {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.file-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.file-heading strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.file-heading span {
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.diff-code {
+  margin-top: 14px;
+  padding: 16px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.inspect-button {
+  flex-shrink: 0;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.inspect-button:hover {
+  background: #f1f5f9;
+}
+
+.inspect-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .details-panel {
+    padding: 16px;
+  }
+
+  .details-panel .history-heading {
+    flex-direction: column;
+  }
+
+  .diff-summary {
+    gap: 10px;
+  }
+}
+
+
+.diff-code .diff-line {
+  display: block;
+  min-height: 1.7em;
+  padding: 0 10px;
+}
+
+.diff-code .diff-added {
+  background: #123b2b;
+  color: #86efac;
+}
+
+.diff-code .diff-removed {
+  background: #4a2028;
+  color: #fda4af;
+}
+
+.diff-code .diff-hunk {
+  color: #93c5fd;
+  background: #172554;
+  font-weight: 600;
+}
+
+.file-heading-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.file-heading-button:hover {
+  background: #f8fafc;
+}
+
+.collapse-indicator {
+  display: inline-block;
+  width: 22px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.file-card {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.file-heading-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.file-heading-button strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.file-content {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.file-content .diff-code {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 12px;
+}

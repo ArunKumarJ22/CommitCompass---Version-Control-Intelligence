@@ -11,6 +11,35 @@ interface Commit {
   commitDate: string | null;
 }
 
+
+interface CommitFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+}
+
+interface CommitDetails {
+  sha: string;
+  html_url: string;
+  commit: {
+    message: string;
+    author?: {
+      name?: string;
+      date?: string;
+    };
+  };
+  files?: CommitFile[];
+  stats?: {
+    additions: number;
+    deletions: number;
+    total: number;
+  };
+}
+
+
 function App() {
   const [owner, setOwner] = useState("microsoft");
   const [repo, setRepo] = useState("vscode");
@@ -19,6 +48,13 @@ function App() {
   const [error, setError] = useState("");
   const [activePage, setActivePage] = useState("Overview");
   const [dataSource, setDataSource] = useState<"github" | "database">("github");
+  const [collapsedFiles, setCollapsedFiles] = useState<string[]>([]);
+  
+  const [selectedCommit, setSelectedCommit] =
+    useState<CommitDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState("");
+
   
   async function fetchCommits() {
   setLoading(true);
@@ -77,6 +113,43 @@ function App() {
     setLoading(false);
   }
 }
+      function toggleFile(filename: string) {
+        setCollapsedFiles((current) =>
+          current.includes(filename)
+            ? current.filter((name) => name !== filename)
+            : [...current, filename]
+        );
+      }
+
+  async function fetchCommitDetails(sha: string) {
+    setDetailsLoading(true);
+    setDetailsError("");
+    setSelectedCommit(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8081/api/github/commits/details?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load commit details: HTTP ${response.status}`
+        );
+      }
+
+      const data: CommitDetails = await response.json();
+      setSelectedCommit(data);
+    } catch (err) {
+      setDetailsError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load commit details."
+      );
+    } finally {
+      setDetailsLoading(false);
+    }
+  }
+
 
   return (
     <div className="dashboard">
@@ -301,7 +374,18 @@ function App() {
                       <span>{date}</span>
                     </div>
                   </div>
-
+                  
+                 <button
+                    className="inspect-button"
+                    type="button"
+                    onClick={() => {
+                      console.log("Inspect clicked:", item.sha);
+                      void fetchCommitDetails(item.sha);
+                    }}
+                    disabled={detailsLoading}
+                  >
+                    Inspect changes
+                  </button>
                   <a
                     className="commit-link"
                     href={item.html_url}
@@ -314,7 +398,111 @@ function App() {
               );
             })}
 
-            
+          {detailsLoading && (
+            <div className="message-panel" role="status">
+              Loading commit details...
+            </div>
+          )}
+
+          {detailsError && (
+            <div className="message-panel error-message" role="alert">
+              <strong>Unable to load commit details</strong>
+              <p>{detailsError}</p>
+            </div>
+          )}
+
+          {selectedCommit && !detailsLoading && (
+            <div className="details-panel">
+              <div className="history-heading">
+                <div>
+                  <h2>Commit details</h2>
+                  <p>{selectedCommit.commit.message.split("\n")[0]}</p>
+                </div>
+                <button
+                  className="inspect-button"
+                  type="button"
+                  onClick={() => setSelectedCommit(null)}
+                >
+                  Close details
+                </button>
+              </div>
+
+              <div className="diff-summary">
+                <span>
+                  {selectedCommit.stats?.total ?? 0} changes
+                </span>
+                <span className="additions">
+                  +{selectedCommit.stats?.additions ?? 0}
+                </span>
+                <span className="deletions">
+                  -{selectedCommit.stats?.deletions ?? 0}
+                </span>
+              </div>
+
+              <h3>Changed files</h3>
+
+               {selectedCommit.files?.length ? (
+                selectedCommit.files.map((file) => {
+                  const isCollapsed = collapsedFiles.includes(file.filename);
+
+                  return (
+                    <article className="file-card" key={file.filename}>
+                      <button
+                        className="file-heading file-heading-button"
+                        type="button"
+                        onClick={() => toggleFile(file.filename)}
+                        aria-expanded={!isCollapsed}
+                      >
+                        <strong>
+                          <span className="collapse-indicator">
+                            {isCollapsed ? "▶" : "▼"}
+                          </span>
+                          {file.filename}
+                        </strong>
+                        <span>{file.status}</span>
+                      </button>
+
+                      {!isCollapsed && (
+                        <div className="file-content">
+                          <p>
+                            <span className="additions">+{file.additions}</span>
+                            {" / "}
+                            <span className="deletions">-{file.deletions}</span>
+                            {" lines"}
+                          </p>
+
+                          {file.patch && (
+                            <pre className="diff-code">
+                              {file.patch.split("\n").map((line, index) => {
+                                const lineClass = line.startsWith("+")
+                                  ? "diff-line diff-added"
+                                  : line.startsWith("-")
+                                    ? "diff-line diff-removed"
+                                    : line.startsWith("@@")
+                                      ? "diff-line diff-hunk"
+                                      : "diff-line";
+
+                                return (
+                                  <span className={lineClass} key={index}>
+                                    {line}
+                                    {"\n"}
+                                  </span>
+                                );
+                              })}
+                            </pre>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })
+
+              ) : (
+                <p>No changed-file details are available.</p>
+              )}
+            </div>
+          )}
+
         </section>
 
         <footer className="footer">
