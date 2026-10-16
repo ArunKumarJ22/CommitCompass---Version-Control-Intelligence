@@ -66,6 +66,25 @@ public class GitHubController {
         return ResponseEntity.ok(details);
     }
 
+    
+    // Fetch open pull requests from GitHub
+    @GetMapping("/api/github/pulls")
+    public ResponseEntity<?> getPullRequests(
+            @RequestParam String owner,
+            @RequestParam String repo
+    ) {
+        if (hasInvalidInput(owner, repo)) {
+            return ResponseEntity.badRequest()
+                    .body("Owner and repository names must not be blank.");
+        }
+
+        JsonNode pullRequests =
+                gitHubService.getPullRequests(owner, repo);
+
+        return ResponseEntity.ok(pullRequests);
+    }
+
+
     // Fetch GitHub commits and save new ones in PostgreSQL
     @PostMapping("/api/github/commits/sync")
     public ResponseEntity<?> syncCommits(

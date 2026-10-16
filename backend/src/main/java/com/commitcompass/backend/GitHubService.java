@@ -143,4 +143,51 @@ public class GitHubService {
             );
         }
     }
+    
+    // Fetch the latest 10 open pull requests from a GitHub repository
+    public JsonNode getPullRequests(String owner, String repo) {
+        String url = "/repos/{owner}/{repo}/pulls?state=open&per_page=10";
+
+        try {
+            return restClient.get()
+                    .uri(url, owner, repo)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+        } catch (RestClientResponseException ex) {
+            int status = ex.getStatusCode().value();
+
+            if (status == 404) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "GitHub repository not found. Check the owner and repository names.",
+                        ex
+                );
+            }
+
+            if (status == 403 || status == 429) {
+                throw new ResponseStatusException(
+                        status == 403
+                                ? HttpStatus.FORBIDDEN
+                                : HttpStatus.TOO_MANY_REQUESTS,
+                        "GitHub denied the request or the API rate limit was reached.",
+                        ex
+                );
+            }
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "GitHub pull request request failed with status " + status + ".",
+                    ex
+            );
+
+        } catch (ResourceAccessException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Cannot connect to GitHub. Check your internet connection and try again.",
+                    ex
+            );
+        }
+    }
+
 }

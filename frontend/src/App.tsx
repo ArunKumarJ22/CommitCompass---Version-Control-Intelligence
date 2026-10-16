@@ -11,6 +11,18 @@ interface Commit {
   commitDate: string | null;
 }
 
+interface PullRequest {
+  number: number;
+  title: string;
+  state: string;
+  html_url: string;
+  draft: boolean;
+  user: {
+    login: string;
+  };
+  created_at: string;
+  body: string | null;
+}
 
 interface CommitFile {
   filename: string;
@@ -46,7 +58,13 @@ function App() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const [activePage, setActivePage] = useState("Overview");
+  const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+  const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
+  const [pullRequestsError, setPullRequestsError] = useState("");
+
+  
   const [dataSource, setDataSource] = useState<"github" | "database">("github");
   const [collapsedFiles, setCollapsedFiles] = useState<string[]>([]);
 
@@ -129,6 +147,42 @@ function App() {
             : [...current, filename]
         );
       }
+  async function fetchPullRequests() {
+    setPullRequestsLoading(true);
+    setPullRequestsError("");
+    setPullRequests([]);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8081/api/github/pulls?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data === "string"
+            ? data
+            : `Failed to load pull requests: HTTP ${response.status}`
+        );
+      }
+
+      if (!Array.isArray(data)) {
+        throw new Error("Unexpected pull request response.");
+      }
+
+      setPullRequests(data);
+    } catch (err) {
+      setPullRequestsError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load pull requests."
+      );
+    } finally {
+      setPullRequestsLoading(false);
+    }
+  }
+
 
   async function fetchCommitDetails(sha: string) {
     setDetailsLoading(true);
@@ -311,6 +365,7 @@ function App() {
             { name: "Overview", icon: "▦" },
             { name: "Commit History", icon: "⑂" },
             { name: "Repositories", icon: "▤" },
+            { name: "Pull Requests", icon: "⑂" },
           ].map((item) => (
             <button
               key={item.name}
@@ -350,7 +405,8 @@ function App() {
           </div>
         </header>
 
-        <section className="welcome-section">
+        <section className="welcome-section"
+        style={{ display: activePage === "Overview" ? undefined : "none" }}>
           <div>
             <p className="eyebrow">YOUR DEVELOPMENT WORKSPACE</p>
             <h2>Understand your code, at a glance.</h2>
@@ -364,7 +420,13 @@ function App() {
           </div>
         </section>
 
-        <section className="search-panel">
+        <section className="search-panel"
+        style={{
+          display:
+            activePage === "Overview" || activePage === "Repositories"
+              ? undefined
+                : "none",
+        }}>
           <div className="section-heading">
             <div>
               <h2>Explore a repository</h2>
@@ -429,7 +491,52 @@ function App() {
           </form>
         </section>
 
-        <section className="stats-grid" aria-label="Repository summary">
+        {activePage === "Repositories" && (
+        <section className="history-section">
+          <div className="history-heading">
+            <div>
+              <h2>Selected repository</h2>
+              <p>
+                Repository currently selected in CommitCompass
+              </p>
+            </div>
+          </div>
+
+          <article className="commit-card">
+            <div className="commit-symbol">▤</div>
+
+            <div className="commit-details">
+              <h3>{owner}/{repo}</h3>
+              <p>
+                Explore commits, inspect code changes, and analyze
+                pull requests for this repository.
+              </p>
+
+              <div className="repository-actions">
+                <button
+                  className="inspect-button"
+                  type="button"
+                  onClick={() => setActivePage("Commit History")}
+                >
+                  View Commit History
+                </button>
+
+                <button
+                  className="inspect-button"
+                  type="button"
+                  onClick={() => setActivePage("Pull Requests")}
+                >
+                  View Pull Requests
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+      )}
+
+        <section className="stats-grid"
+        style={{ display: activePage === "Overview" ? undefined : "none" }}
+         aria-label="Repository summary">
           <article className="stat-card">
             <div className="stat-icon blue">⑂</div>
             <p>Commits loaded</p>
@@ -458,7 +565,13 @@ function App() {
           </article>
         </section>
 
-        <section className="history-section">
+        <section className="history-section" 
+        style={{
+          display:
+            activePage === "Overview" || activePage === "Commit History"
+              ? undefined
+                : "none",
+          }}>
           <div className="history-heading">
             <div>
               <h2>Recent commits</h2>
@@ -713,6 +826,89 @@ function App() {
           )}
 
         </section>
+
+        {activePage === "Pull Requests" && (
+          <section className="history-section">
+            <div className="history-heading">
+              <div>
+                <h2>
+                  Open pull requests
+                  <span className="pr-count">{pullRequests.length}</span>
+                </h2>
+                <p>
+                  Showing open pull requests for {owner}/{repo}
+                </p>
+              </div>
+
+              <button
+                className="inspect-button"
+                type="button"
+                onClick={() => void fetchPullRequests()}
+                disabled={pullRequestsLoading}
+              >
+                {pullRequestsLoading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+
+            {pullRequestsError && (
+              <div className="message-panel error-message" role="alert">
+                {pullRequestsError}
+              </div>
+            )}
+
+            {pullRequestsLoading && (
+              <div className="message-panel" role="status">
+                Loading pull requests from GitHub...
+              </div>
+            )}
+
+            {!pullRequestsLoading &&
+              !pullRequestsError &&
+              pullRequests.length === 0 && (
+                <div className="empty-state">
+                  <h3>No pull requests loaded</h3>
+                  <p>
+                    Click Refresh to load open pull requests for this repository.
+                  </p>
+                </div>
+              )}
+
+            {pullRequests.map((pr) => (
+              <article className="commit-card" key={pr.number}>
+                <div className="commit-symbol">⑂</div>
+
+                <div className="commit-details">
+                  <h3>
+                    #{pr.number} — {pr.title}
+                  </h3>
+
+                  <div className="commit-metadata">
+                    <span>{pr.user?.login ?? "Unknown author"}</span>
+                    <span className="metadata-separator">·</span>
+                    <span className={`pr-status ${pr.draft ? "draft" : "open"}`}>
+                    {pr.draft ? "Draft" : "Open"}
+                    </span>
+                    <span className="metadata-separator">·</span>
+                    <span>
+                      {new Date(pr.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {pr.body && <p>{pr.body}</p>}
+                </div>
+
+                <a
+                  className="commit-link"
+                  href={pr.html_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open on GitHub ↗
+                </a>
+              </article>
+            ))}
+          </section>
+        )}
 
         <footer className="footer">
          <span>CommitCompass</span>
