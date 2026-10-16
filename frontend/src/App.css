@@ -1017,3 +1017,37 @@ input:focus-visible {
 .ai-explanation-text h4 {
   text-align: left;
 }
+
+/* Improve readability of AI risk analysis */
+.ai-explanation-card {
+  color: #253247;
+  background: #ffffff;
+}
+
+.ai-explanation-text {
+  color: #253247;
+  text-align: left;
+}
+
+.ai-explanation-text h1,
+.ai-explanation-text h2,
+.ai-explanation-text h3,
+.ai-explanation-text h4,
+.ai-explanation-text strong,
+.ai-explanation-text p,
+.ai-explanation-text li {
+  color: #253247;
+}
+
+.ai-explanation-text code {
+  color: #253247;
+  background: #e9eef5;
+}
+
+.ai-explanation-section {
+  margin: 20px 0 28px;
+}
+
+.ai-explanation-section .primary-button {
+  margin-bottom: 12px;
+}

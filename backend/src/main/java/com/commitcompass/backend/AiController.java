@@ -45,4 +45,23 @@ public class AiController {
                 .body(Map.of("error", exception.getMessage()));
         }
     }
+    
+    @PostMapping("/risk-analysis")
+    public ResponseEntity<Map<String, String>> analyzeRisk(
+            @RequestBody ExplainRequest request) {
+
+        if (request.diff() == null || request.diff().isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "A code diff is required."));
+        }
+
+        try {
+            String analysis = aiExplanationService.analyzeRisk(request.diff());
+            return ResponseEntity.ok(Map.of("analysis", analysis));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", exception.getMessage()));
+        }
+    }
+
 }

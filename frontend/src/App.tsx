@@ -59,6 +59,10 @@ function App() {
   const [selectedCommit, setSelectedCommit] =
     useState<CommitDetails | null>(null);
 
+  const [riskAnalysis, setRiskAnalysis] = useState("");
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskError, setRiskError] = useState("");
+
 
   
   async function fetchCommits() {
@@ -226,6 +230,67 @@ function App() {
       }
     }
 
+
+    async function analyzeSelectedCommitRisk() {
+      if (!selectedCommit) return;
+
+      setRiskAnalysis("");
+      setRiskError("");
+
+      const diff = (selectedCommit.files ?? [])
+        .filter((file) => file.patch)
+        .map((file) => `File: ${file.filename}\n${file.patch}`)
+        .join("\n\n");
+
+      if (!diff.trim()) {
+        setRiskError("No code patches are available for this commit.");
+        return;
+      }
+
+      if (diff.length > 30000) {
+        setRiskError("This diff is too large to analyze.");
+        return;
+      }
+
+      setRiskLoading(true);
+
+      try {
+        const response = await fetch(
+          "http://localhost:8081/api/ai/risk-analysis",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ diff }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ?? `Risk analysis failed: HTTP ${response.status}`
+          );
+        }
+
+        if (typeof data.analysis !== "string") {
+          throw new Error("The server returned an invalid risk analysis.");
+        }
+
+        const cleanedAnalysis = data.analysis
+          .replace(/\\([#*_`])/g, "$1")
+          .replace(/\\n/g, "\n");
+
+        setRiskAnalysis(cleanedAnalysis);
+      } catch (err) {
+        setRiskError(
+          err instanceof Error
+            ? err.message
+            : "Unable to analyze commit risk."
+        );
+      } finally {
+        setRiskLoading(false);
+      }
+    }
 
 
   return (
@@ -549,7 +614,39 @@ function App() {
                   </article>
                 )}
               </div>
+              
+              <div className="ai-explanation-section">
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() => void analyzeSelectedCommitRisk()}
+                  disabled={riskLoading}
+                >
+                  {riskLoading ? "Analyzing risk..." : "Analyze Risk"}
+                </button>
 
+                {riskLoading && (
+                  <div className="message-panel" role="status">
+                    Assessing potential risks and regressions...
+                  </div>
+                )}
+
+                {riskError && (
+                  <div className="message-panel error-message" role="alert">
+                    <strong>Risk analysis failed</strong>
+                    <p>{riskError}</p>
+                  </div>
+                )}
+
+                {riskAnalysis && (
+                  <article className="ai-explanation-card">
+                    <h3>AI Risk Analysis</h3>
+                    <div className="ai-explanation-text">
+                      <ReactMarkdown>{riskAnalysis}</ReactMarkdown>
+                    </div>
+                  </article>
+                )}
+              </div>
 
               <h3>Changed files</h3>
 
