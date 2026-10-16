@@ -970,61 +970,50 @@ input:focus-visible {
   font-weight: 600;
 }
 
-.file-heading-button {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
 
-.file-heading-button:hover {
-  background: #f8fafc;
-}
-
-.collapse-indicator {
-  display: inline-block;
-  width: 22px;
-  color: #64748b;
-  font-size: 11px;
-}
-
-.file-card {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.file-heading-button {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.file-heading-button strong {
-  min-width: 0;
+.ai-explanation-text {
   overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
-.file-content {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
+.ai-explanation-text h3,
+.ai-explanation-text h4 {
+  margin-top: 18px;
+  margin-bottom: 8px;
 }
 
-.file-content .diff-code {
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 12px;
+.ai-explanation-text ul,
+.ai-explanation-text ol {
+  padding-left: 24px;
+  margin: 8px 0 16px;
+}
+
+.ai-explanation-text p {
+  margin: 8px 0;
+}
+
+.ai-explanation-text code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e9eef5;
+  color: #253247;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.9em;
+}
+
+.ai-explanation-text pre,
+.ai-explanation-text pre code {
+  color: #253247;
+}
+
+.ai-explanation-text {
+  text-align: left;
+}
+
+.ai-explanation-text h1,
+.ai-explanation-text h2,
+.ai-explanation-text h3,
+.ai-explanation-text h4 {
+  text-align: left;
 }

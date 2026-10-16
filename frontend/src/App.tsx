@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import "./App.css";
-
+import ReactMarkdown from "react-markdown";
 
 interface Commit {
   sha: string;
@@ -49,11 +49,16 @@ function App() {
   const [activePage, setActivePage] = useState("Overview");
   const [dataSource, setDataSource] = useState<"github" | "database">("github");
   const [collapsedFiles, setCollapsedFiles] = useState<string[]>([]);
-  
-  const [selectedCommit, setSelectedCommit] =
-    useState<CommitDetails | null>(null);
+
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
+  const [aiExplanation, setAiExplanation] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const [selectedCommit, setSelectedCommit] =
+    useState<CommitDetails | null>(null);
+
 
   
   async function fetchCommits() {
@@ -149,6 +154,78 @@ function App() {
       setDetailsLoading(false);
     }
   }
+
+  
+    async function explainSelectedCommit() {
+      if (!selectedCommit) {
+        return;
+      }
+
+      setAiExplanation("");
+      setAiError("");
+
+      const files = selectedCommit.files ?? [];
+      const diff = files
+        .filter((file) => file.patch)
+        .map((file) => `File: ${file.filename}\n${file.patch}`)
+        .join("\n\n");
+
+      if (!diff.trim()) {
+        setAiError(
+          "No code patches are available for this commit."
+        );
+        return;
+      }
+
+      if (diff.length > 30000) {
+        setAiError(
+          "This diff is too large. Please inspect a smaller commit."
+        );
+        return;
+      }
+
+      setAiLoading(true);
+
+      try {
+        const response = await fetch(
+          "http://localhost:8081/api/ai/explain",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ diff }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ?? `AI request failed: HTTP ${response.status}`
+          );
+        }
+
+        if (typeof data.explanation !== "string") {
+          throw new Error("The server returned an invalid explanation.");
+        }
+
+        const cleanedExplanation = data.explanation
+          .replace(/\\([#*_`])/g, "$1")
+          .replace(/\\n/g, "\n");
+
+        setAiExplanation(cleanedExplanation);
+      } catch (err) {
+        setAiError(
+          err instanceof Error
+            ? err.message
+            : "Unable to generate an AI explanation."
+        );
+      } finally {
+        setAiLoading(false);
+      }
+    }
+
 
 
   return (
@@ -438,6 +515,41 @@ function App() {
                   -{selectedCommit.stats?.deletions ?? 0}
                 </span>
               </div>
+
+              
+              <div className="ai-explanation-section">
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() => void explainSelectedCommit()}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? "Analyzing code..." : "Explain with AI"}
+                </button>
+
+                {aiLoading && (
+                  <div className="message-panel" role="status">
+                    AI is analyzing the commit changes. Please wait...
+                  </div>
+                )}
+
+                {aiError && (
+                  <div className="message-panel error-message" role="alert">
+                    <strong>Unable to explain this commit</strong>
+                    <p>{aiError}</p>
+                  </div>
+                )}
+
+                {aiExplanation && (
+                  <article className="ai-explanation-card">
+                    <h3>AI Commit Explanation</h3>
+                    <div className="ai-explanation-text">
+                      <ReactMarkdown>{aiExplanation}</ReactMarkdown>
+                    </div>
+                  </article>
+                )}
+              </div>
+
 
               <h3>Changed files</h3>
 
