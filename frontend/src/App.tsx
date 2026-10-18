@@ -93,8 +93,44 @@ interface CommitDetails {
     total: number;
   };
 }
+function splitDiffIntoChunks(
+  diff: string,
+  maxChars = 18000
+): string[] {
+  const chunks: string[] = [];
+  let current = "";
 
+  for (const line of diff.split("\n")) {
+    // Handle an unusually long individual line safely.
+    if (line.length > maxChars) {
+      if (current) {
+        chunks.push(current);
+        current = "";
+      }
 
+      for (let i = 0; i < line.length; i += maxChars) {
+        chunks.push(line.slice(i, i + maxChars));
+      }
+
+      continue;
+    }
+
+    const next = current ? `${current}\n${line}` : line;
+
+    if (next.length > maxChars) {
+      chunks.push(current);
+      current = line;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
+}
 
 function App() {
   const [owner, setOwner] = useState("microsoft");
@@ -185,7 +221,7 @@ function App() {
         : "commits/saved";
 
     const response = await fetch(
-      `http://localhost:8081/api/github/${endpoint}?owner=${encodeURIComponent(selectedOwner)}&repo=${encodeURIComponent(selectedRepo)}`
+      `/api/github/${endpoint}?owner=${encodeURIComponent(selectedOwner)}&repo=${encodeURIComponent(selectedRepo)}`
     );
 
     if (!response.ok) {
@@ -228,7 +264,7 @@ function App() {
       // A history failure should not make a successful commit request appear to fail.
       try {
         const historyResponse = await fetch(
-          `http://localhost:8081/api/repositories/history?owner=${encodeURIComponent(selectedOwner.trim())}&repo=${encodeURIComponent(selectedRepo.trim())}`,
+          `/api/repositories/history?owner=${encodeURIComponent(selectedOwner.trim())}&repo=${encodeURIComponent(selectedRepo.trim())}`,
           { method: "POST" }
         );
 
@@ -282,7 +318,7 @@ function App() {
     async function fetchRepositoryHistory() {
       try {
         const response = await fetch(
-          "http://localhost:8081/api/repositories/history"
+          "/api/repositories/history"
         );
 
         if (!response.ok) {
@@ -303,7 +339,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:8081/api/github/pulls?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+        `/api/github/pulls?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
       );
 
       const data = await response.json();
@@ -341,7 +377,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:8081/api/github/pulls/${pullRequest.number}/checks?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+        `/api/github/pulls/${pullRequest.number}/checks?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
       );
 
       const data = await response.json();
@@ -378,7 +414,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:8081/api/github/pulls/${pullRequest.number}/files?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+        `/api/github/pulls/${pullRequest.number}/files?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
       );
 
       if (!response.ok) {
@@ -427,7 +463,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://localhost:8081/api/ai/risk-analysis",
+        "/api/ai/risk-analysis",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -486,7 +522,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:8081/api/github/commits/details?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}`
+        `/api/github/commits/details?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}`
       );
 
       if (!response.ok) {
@@ -530,52 +566,51 @@ function App() {
         return;
       }
 
-      if (diff.length > 30000) {
-        setAiError(
-          "This diff is too large. Please inspect a smaller commit."
-        );
-        return;
-      }
-
       setAiLoading(true);
 
       try {
-        const response = await fetch(
-          "http://localhost:8081/api/ai/explain",
-          {
+        const chunks = splitDiffIntoChunks(diff);
+        const analyses: string[] = [];
+
+        for (let i = 0; i < chunks.length; i++) {
+          const response = await fetch("/api/ai/risk-analysis", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ diff }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ diff: chunks[i] }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error ?? `Risk analysis failed: HTTP ${response.status}`
+            );
           }
-        );
 
-        const data = await response.json();
+          if (typeof data.analysis !== "string") {
+            throw new Error("The server returned an invalid risk analysis.");
+          }
 
-        if (!response.ok) {
-          throw new Error(
-            data.error ?? `AI request failed: HTTP ${response.status}`
+          analyses.push(
+            `## Part ${i + 1} of ${chunks.length}\n\n${data.analysis}`
           );
         }
 
-        if (typeof data.explanation !== "string") {
-          throw new Error("The server returned an invalid explanation.");
-        }
+        const combinedAnalysis = analyses.join("\n\n---\n\n");
+        setRiskAnalysis(combinedAnalysis);
 
-        const cleanedExplanation = data.explanation
-          .replace(/\\([#*_`])/g, "$1")
-          .replace(/\\n/g, "\n");
 
-        setAiExplanation(cleanedExplanation);
+
+// The combined risk analysis is already displayed below.
+// No separate risk-level state update is needed here.
       } catch (err) {
-        setAiError(
+        setRiskError(
           err instanceof Error
             ? err.message
-            : "Unable to generate an AI explanation."
+            : "Unable to analyze this commit."
         );
       } finally {
-        setAiLoading(false);
+        setRiskLoading(false);
       }
     }
 
@@ -605,7 +640,7 @@ function App() {
 
       try {
         const response = await fetch(
-          "http://localhost:8081/api/ai/risk-analysis",
+          "/api/ai/risk-analysis",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

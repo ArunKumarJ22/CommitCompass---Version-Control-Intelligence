@@ -1,0 +1,26 @@
+
+services:
+  backend:
+    image: commitcompass-backend:local
+    container_name: commitcompass-backend
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5433/commitcompass
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-commitcompass}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    image: commitcompass-frontend:local
+    container_name: commitcompass-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
