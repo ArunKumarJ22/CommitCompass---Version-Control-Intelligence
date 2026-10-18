@@ -43,6 +43,20 @@ interface PullRequestFile {
 }
 
 
+interface PullRequestCheck {
+  id: number;
+  name: string;
+  status: "queued" | "in_progress" | "completed" | string;
+  conclusion: string | null;
+  html_url: string;
+  details_url?: string;
+  output?: {
+    title?: string | null;
+    summary?: string | null;
+  };
+}
+
+
 interface CommitFile {
   filename: string;
   status: string;
@@ -108,12 +122,22 @@ function App() {
 
   const [pullRequestFilesError, setPullRequestFilesError] =
   useState("");
+  const [pullRequestChecks, setPullRequestChecks] =
+  useState<PullRequestCheck[]>([]);
+
+  const [pullRequestChecksLoading, setPullRequestChecksLoading] =
+  useState(false);
+
+  const [pullRequestChecksError, setPullRequestChecksError] =
+  useState("");
+
   
   const [prRiskAnalysis, setPrRiskAnalysis] = useState("");
+  const [prRiskLevels, setPrRiskLevels] = useState<Record<number, string>>({});
   const [prRiskLoading, setPrRiskLoading] = useState(false);
   const [prRiskError, setPrRiskError] = useState("");
 
-
+  const [prDetailView, setPrDetailView] = useState<"files" | "checks">("files");
 
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
@@ -123,6 +147,8 @@ function App() {
 
   const [selectedCommit, setSelectedCommit] =
     useState<CommitDetails | null>(null);
+
+  const [collapsedFiles, setCollapsedFiles] = useState<string[]>([]);
 
   const [riskAnalysis, setRiskAnalysis] = useState("");
   const [riskLoading, setRiskLoading] = useState(false);
@@ -195,13 +221,24 @@ function App() {
       };
     });
 
-    setCommits(normalizedCommits);
-    await fetch(
-      `http://localhost:8081/api/repositories/history?owner=${encodeURIComponent(owner.trim())}&repo=${encodeURIComponent(repo.trim())}`,
-      { method: "POST" }
-    );
+    
+      setCommits(normalizedCommits);
 
-    await fetchRepositoryHistory();
+      // Saving repository history is secondary to loading commits.
+      // A history failure should not make a successful commit request appear to fail.
+      try {
+        const historyResponse = await fetch(
+          `http://localhost:8081/api/repositories/history?owner=${encodeURIComponent(selectedOwner.trim())}&repo=${encodeURIComponent(selectedRepo.trim())}`,
+          { method: "POST" }
+        );
+
+        if (historyResponse.ok) {
+          await fetchRepositoryHistory();
+        }
+      } catch (historyError) {
+        console.error("Unable to save repository history:", historyError);
+      }
+
       const historyItem: RepositoryHistoryItem = {
       owner: owner.trim(),
       repo: repo.trim(),
@@ -295,9 +332,47 @@ function App() {
     }
   }
   
-  const fetchPullRequestFiles = async (pullRequest: PullRequest) => {
+
+  async function fetchPullRequestChecks(pullRequest: PullRequest) {
     setSelectedPullRequest(pullRequest);
-    setPullRequestFiles([]);
+    setPullRequestChecks([]);
+    setPullRequestChecksError("");
+    setPullRequestChecksLoading(true);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8081/api/github/pulls/${pullRequest.number}/checks?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data === "string"
+            ? data
+            : `Failed to load CI checks: HTTP ${response.status}`
+        );
+      }
+
+      if (!Array.isArray(data.check_runs)) {
+        throw new Error("Unexpected CI checks response from the server.");
+      }
+
+      setPullRequestChecks(data.check_runs);
+    } catch (error) {
+      setPullRequestChecksError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load CI checks."
+      );
+    } finally {
+      setPullRequestChecksLoading(false);
+    }
+  }
+
+
+  async function fetchPullRequestFiles(pullRequest: PullRequest) {
+    setSelectedPullRequest(pullRequest);
     setPullRequestFilesError("");
     setPullRequestFilesLoading(true);
 
@@ -307,22 +382,19 @@ function App() {
       );
 
       if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Failed to fetch pull request files.");
+        throw new Error(`Failed to load changed files: HTTP ${response.status}`);
       }
 
       const files: PullRequestFile[] = await response.json();
       setPullRequestFiles(files);
     } catch (error) {
       setPullRequestFilesError(
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred while fetching pull request files."
+        error instanceof Error ? error.message : "Unable to load changed files."
       );
     } finally {
       setPullRequestFilesLoading(false);
     }
-  };
+  }
 
   
   async function analyzePullRequestRisk() {
@@ -376,6 +448,22 @@ function App() {
       }
 
       setPrRiskAnalysis(data.analysis);
+      
+      const riskMatch = data.analysis.match(
+        /(?:overall\s+risk\s+level|risk\s+level)\s*[:\-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+      ) ?? data.analysis.match(
+        /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:\-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+      );
+
+      const riskLevel = riskMatch?.[1]?.toLowerCase();
+
+      if (riskLevel && selectedPullRequest) {
+        setPrRiskLevels(previous => ({
+          ...previous,
+          [selectedPullRequest.number]: riskLevel,
+        }));
+      }
+
     } catch (error) {
       setPrRiskError(
         error instanceof Error
@@ -737,19 +825,23 @@ function App() {
                   </p>
                 </div>
 
-                <button
-                  className="inspect-button"
-                  type="button"
-                  onClick={async () => {
+                
+              
+              <button
+                className="inspect-button"
+                type="button"
+                onClick={() => {
                   setOwner(item.owner);
                   setRepo(item.repo);
-                  setActivePage("Overview");
-
-                  await fetchCommits(item.owner, item.repo);
+                  setActivePage("Commit History");
+                  void fetchCommits();
                 }}
-                >
-                  Select repository
-                </button>
+                disabled={loading}
+              >
+                Explore repository
+              </button>
+
+
               </article>
             ))
           )}
@@ -930,7 +1022,8 @@ function App() {
                 </button>
               </div>
 
-              
+          {prDetailView === "files" && (
+            <>
               <div className="diff-summary diff-summary-cards">
                 <div className="diff-stat">
                   <span className="diff-stat-label">Files changed</span>
@@ -951,7 +1044,8 @@ function App() {
                   </strong>
                 </div>
               </div>
-
+            </>
+          )}
 
               
               
@@ -1140,6 +1234,15 @@ function App() {
                   <h3>
                     #{pr.number} — {pr.title}
                   </h3>
+                    
+                  {prRiskLevels[pr.number] && (
+                    <div className={`risk-badge risk-${prRiskLevels[pr.number]}`}>
+                      <span className="risk-indicator" />
+                      {prRiskLevels[pr.number].charAt(0).toUpperCase() +
+                        prRiskLevels[pr.number].slice(1)} Risk
+                    </div>
+                  )}
+
 
                   <div className="commit-metadata">
                     <span>{pr.user?.login ?? "Unknown author"}</span>
@@ -1156,12 +1259,33 @@ function App() {
                   <button
                     className="inspect-button"
                     type="button"
-                    onClick={() => void fetchPullRequestFiles(pr)}
+                    onClick={() => {
+  setPrDetailView("files");
+  void fetchPullRequestFiles(pr);
+}}
                   >
                     {pullRequestFilesLoading && selectedPullRequest?.number === pr.number
                       ? "Loading files..."
                       : "View changed files"}
                   </button>
+
+                  
+                 
+<button
+  className="inspect-button"
+  type="button"
+  onClick={() => {
+    setPrDetailView("checks");
+    void fetchPullRequestChecks(pr);
+  }}
+  disabled={pullRequestChecksLoading}
+>
+  {pullRequestChecksLoading &&
+  selectedPullRequest?.number === pr.number
+    ? "Loading checks..."
+    : "View CI Checks"}
+</button>
+    
 
 
                   {pr.body && <p>{pr.body}</p>}
@@ -1183,9 +1307,151 @@ function App() {
                 <div className="history-heading">
                   <div>
                     <h2>
-                      Changed files — PR #{selectedPullRequest.number}
+                      {prDetailView === "files" ? "Changed files" : "CI Checks"}
+                      {" — PR #"}
+                      {selectedPullRequest.number}
                     </h2>
-                    <p>{selectedPullRequest.title}</p>
+                    <p>{selectedPullRequest.title}</p> 
+                    {prDetailView === "checks" && (
+                    <>
+                      {pullRequestChecksLoading && (
+                       <p>Loading CI checks...</p>
+                      )}
+
+                    {pullRequestChecksError && (
+                      <p className="error-message">
+                        {pullRequestChecksError}
+                      </p>
+                    )}
+
+                    {!pullRequestChecksLoading &&
+                      !pullRequestChecksError &&
+                      pullRequestChecks.length === 0 && (
+                        <p>No CI checks loaded yet. Click "View CI Checks" on a pull request.</p>
+                      )}
+                      </>
+                    )}
+                  </div>
+                  <div className="history-actions">
+                    <button
+                      className="inspect-button"
+                      type="button"
+                      onClick={() => {
+                        setPrDetailView("files");
+                        void fetchPullRequestFiles(selectedPullRequest);
+                      }}
+                      disabled={pullRequestFilesLoading}
+                    >
+                      {pullRequestFilesLoading
+                        ? "Loading files..."
+                        : "View changed files"}
+                    </button>
+
+                  {prDetailView === "checks" &&
+                    pullRequestChecks.length > 0 && (
+                      <div className="ci-checks-list">
+                        <h3>CI Checks ({pullRequestChecks.length})</h3>
+                        <div className="ci-summary">
+                          <span>
+                            Passed:{" "}
+                            {pullRequestChecks.filter(
+                              (check) =>
+                                check.status === "completed" &&
+                                check.conclusion === "success"
+                            ).length}
+                          </span>
+
+                          <span>
+                            Failed:{" "}
+                            {pullRequestChecks.filter(
+                              (check) =>
+                                check.conclusion === "failure" ||
+                                check.conclusion === "timed_out"
+                            ).length}
+                          </span>
+
+                          <span>
+                            Running:{" "}
+                            {
+                              pullRequestChecks.filter(
+                                (check) =>
+                                  check.status === "in_progress" ||
+                                  check.status === "queued"
+                              ).length
+                            }
+                          </span>
+                        </div>
+
+                        {pullRequestChecks.map((check) => (
+                          <div className="commit-card" key={check.id}>
+                            <strong>{check.name}</strong>
+
+                            <p
+                              className={`ci-status ${
+                                check.status !== "completed"
+                                  ? "ci-running"
+                                  : check.conclusion === "success"
+                                    ? "ci-passed"
+                                    : check.conclusion === "failure" ||
+                                        check.conclusion === "timed_out"
+                                      ? "ci-failed"
+                                      : "ci-neutral"
+                              }`}
+                            >
+                              Status:{" "}
+                              {check.status !== "completed"
+                                ? check.status === "in_progress"
+                                  ? "Running"
+                                  : "Queued"
+                                : check.conclusion ?? "Completed"}
+                            </p>
+
+                            {check.output?.title && (
+                              <p>{check.output.title}</p>
+                            )}
+
+                            {(check.html_url || check.details_url) && (
+                              <a
+                                href={check.details_url || check.html_url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View check details ↗
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {prDetailView === "files" && (
+                                        <div className="diff-summary diff-summary-cards">
+                      <div className="diff-stat">
+                        <span className="diff-stat-label">Files changed</span>
+                        <strong>{pullRequestFiles.length}</strong>
+                      </div>
+
+                      <div className="diff-stat">
+                        <span className="diff-stat-label">Lines added</span>
+                        <strong className="additions">
+                          +{pullRequestFiles.reduce((total, file) => total + file.additions, 0)}
+                        </strong>
+                      </div>
+
+                      <div className="diff-stat">
+                        <span className="diff-stat-label">Lines removed</span>
+                        <strong className="deletions">
+                          −{pullRequestFiles.reduce((total, file) => total + file.deletions, 0)}
+                        </strong>
+                      </div>
+
+                      <div className="diff-stat">
+                        <span className="diff-stat-label">Files with text diffs</span>
+                        <strong>
+                          {pullRequestFiles.filter(file => Boolean(file.patch)).length}
+                        </strong>
+                      </div>
+                    </div>
+)}
                     <div className="ai-toolbar">
                       <button
                         className="primary-button"
@@ -1195,6 +1461,7 @@ function App() {
                       >
                         {prRiskLoading ? "Analyzing PR..." : "Analyze PR Risk with AI"}
                       </button>
+                      
                     </div>
 
                     {prRiskLoading && (
@@ -1210,18 +1477,115 @@ function App() {
                     )}
 
                     {prRiskAnalysis && (
-                      <article className="ai-explanation-card">
-                        <h3>AI Pull Request Risk Review</h3>
-                        <div className="ai-explanation-text">
-                          <ReactMarkdown>{prRiskAnalysis}</ReactMarkdown>
+                    <article className="ai-explanation-card">
+                      <h3>AI Pull Request Risk Review</h3>
+                      
+                      <button
+                        className="inspect-button"
+                        type="button"
+                        onClick={() => {
+                          const report = [
+                            `# AI Pull Request Risk Review`,
+                            ``,
+                            `Repository: ${owner}/${repo}`,
+                            `Pull Request: #${selectedPullRequest.number} — ${selectedPullRequest.title}`,
+                            ``,
+                            prRiskAnalysis,
+                          ].join("\n");
+
+                          void navigator.clipboard.writeText(report).then(
+                            () => window.alert("AI review copied to clipboard."),
+                            () => window.alert("Unable to copy the review. Please try again.")
+                          );
+                        }}
+                      >
+                        Copy Review
+                      </button>
+
+                      <div className="pr-findings-summary">
+                        <div className="pr-finding">
+                          <span>Changed files reviewed</span>
+                          <strong>{pullRequestFiles.length}</strong>
                         </div>
-                      </article>
+
+                        <div className="pr-finding">
+                          <span>Files with text diffs</span>
+                          <strong>
+                            {pullRequestFiles.filter(file => Boolean(file.patch)).length}
+                          </strong>
+                        </div>
+
+                        <div className="pr-finding">
+                          <span>Lines added</span>
+                          <strong className="additions">
+                            +{pullRequestFiles.reduce((total, file) => total + file.additions, 0)}
+                          </strong>
+                        </div>
+
+                        <div className="pr-finding">
+                          <span>Lines removed</span>
+                          <strong className="deletions">
+                            −{pullRequestFiles.reduce((total, file) => total + file.deletions, 0)}
+                          </strong>
+                        </div>
+                      </div>
+
+
+                      {(() => {
+                        
+                    const match = prRiskAnalysis.match(
+                      /(?:overall\s+risk\s+level|risk\s+level)\s*[:\-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+                    ) ?? prRiskAnalysis.match(
+                      /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:\-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+                    );
+                    const riskLevel = match?.[1]?.toLowerCase();
+
+
+                        
+                      return riskLevel ? (
+                        <div className="risk-overview">
+                          <div className={`risk-badge risk-${riskLevel}`}>
+                            <span className="risk-indicator" />
+                            {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
+                          </div>
+
+                          <p className="risk-summary">
+                            {(() => {
+                              const text = prRiskAnalysis
+                                .replace(/^#{1,6}\s+.*$/gm, "")
+                                .replace(/[*_`]/g, "")
+                                .replace(/^\s*[-*]\s+/gm, "")
+                                .replace(/^\s*\d+\.\s+/gm, "")
+                                .split(/\n+/)
+                                .map(line => line.trim())
+                                .find(line =>
+                                  line.length > 35 &&
+                                  !/^(potential bugs|regression risks|recommended tests|missing tests|recommended actions)\b/i.test(line)
+                                );
+
+                              return text
+                                ? text.length > 220
+                                  ? `${text.slice(0, 217).trimEnd()}...`
+                                  : text
+                                : "Review the analysis below for details about this risk level.";
+                            })()}
+                          </p>
+                        </div>
+                      ) : null;
+
+                      })()}
+
+                      <div className="ai-explanation-text">
+                        <ReactMarkdown>{prRiskAnalysis}</ReactMarkdown>
+                      </div>
+                    </article>
+
                     )}
 
                   </div>
 
                   <button
-                    className="inspect-button"
+                    className="inspect-button close-files-button"
                     type="button"
                     onClick={() => {
                       setSelectedPullRequest(null);
@@ -1232,7 +1596,8 @@ function App() {
                     Close files
                   </button>
                 </div>
-
+              {prDetailView === "files" && (
+                <>
                 {pullRequestFilesLoading && (
                   <div className="message-panel" role="status">
                     Loading changed files...
@@ -1247,9 +1612,10 @@ function App() {
 
                 {!pullRequestFilesLoading &&
                   !pullRequestFilesError &&
+                  selectedPullRequest &&
                   pullRequestFiles.length === 0 && (
                     <p>No changed files were returned for this pull request.</p>
-                  )}
+                )}
 
                 {!pullRequestFilesLoading &&
                   pullRequestFiles.map((file) => (
@@ -1292,6 +1658,8 @@ function App() {
                       </div>
                     </article>
                   ))}
+                    </>
+)}
               </div>
             )}
 

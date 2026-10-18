@@ -1,0 +1,19 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Node.js / Vite
+node_modules/
+frontend/dist/
+
+# Java / Maven
+backend/target/
+
+# IDEs and editors
+.idea/
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db

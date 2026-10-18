@@ -12,5 +12,16 @@ public interface CommitRepository extends JpaRepository<Commit, Long> {
             String repositoryName
     );
 
-     Optional<Commit> findBySha(String sha);
+    Optional<Commit> findBySha(String sha);
+
+    boolean existsByShaAndRepositoryOwnerAndRepositoryName(
+            String sha,
+            String repositoryOwner,
+            String repositoryName
+    );
+
+    List<Commit> findByRepositoryOwnerAndRepositoryNameOrderByCommitDateDesc(
+            String repositoryOwner,
+            String repositoryName
+    );
 }

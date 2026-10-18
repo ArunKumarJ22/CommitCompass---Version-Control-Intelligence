@@ -99,8 +99,13 @@ public String analyzeRisk(String diff) {
            Explain how existing behavior could be affected.
            Distinguish observed changes from possibilities.
 
-        4. Missing Tests
+        4. Recommended Tests
            Recommend specific tests for the changed behavior.
+           Include relevant unit tests, integration tests, and regression
+           tests where appropriate.
+           Explain what each test should verify.
+           Base recommendations on the supplied diff, and identify
+           assumptions when context is missing.
 
         5. Recommended Actions
            List practical steps a developer should take.

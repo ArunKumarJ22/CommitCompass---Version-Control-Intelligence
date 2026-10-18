@@ -1186,14 +1186,28 @@ input:focus-visible {
 }
 
 /* Three separate metric cards */
+
 .diff-summary-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin: 24px 0;
   padding: 0;
   background: transparent;
 }
+
+@media (max-width: 900px) {
+  .diff-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .diff-summary-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 .diff-stat {
   display: flex;
@@ -1545,3 +1559,134 @@ input:focus-visible {
   color: #334155;
   background: #f8fafc;
 }
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 12px 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.risk-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.risk-low {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+.risk-medium {
+  color: #b45309;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.risk-high {
+  color: #b91c1c;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+
+
+.pr-findings-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.pr-finding {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.pr-finding span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.pr-finding strong {
+  font-size: 22px;
+}
+
+@media (max-width: 480px) {
+  .pr-findings-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.ci-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.ci-passed {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.ci-failed {
+  color: #b91c1c;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.ci-running {
+  color: #a16207;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+.ci-neutral {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+
+.details-panel .history-heading {
+  position: relative;
+}
+
+.details-panel .history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Move Close files to the top-right */
+.details-panel .close-files-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.details-panel .close-files-button:hover {
+  background: #f1f5f9;
+}
+

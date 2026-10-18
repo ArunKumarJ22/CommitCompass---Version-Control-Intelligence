@@ -24,10 +24,13 @@ class GitHubControllerTest {
     void setUp() {
         gitHubService = mock(GitHubService.class);
         commitPersistenceService = mock(CommitPersistenceService.class);
+        RegressionInvestigationService regressionInvestigationService =
+        org.mockito.Mockito.mock(RegressionInvestigationService.class);
 
         controller = new GitHubController(
                 gitHubService,
-                commitPersistenceService
+                commitPersistenceService,
+                regressionInvestigationService
         );
     }
 

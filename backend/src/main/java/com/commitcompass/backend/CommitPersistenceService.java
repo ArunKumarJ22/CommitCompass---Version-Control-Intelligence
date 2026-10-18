@@ -29,7 +29,9 @@ public class CommitPersistenceService {
 
             String sha = item.path("sha").asText("");
 
-            if (sha.isBlank() || commitRepository.findBySha(sha).isPresent()) {
+            if (sha.isBlank()
+                    || commitRepository.existsByShaAndRepositoryOwnerAndRepositoryName(
+                            sha, owner, repo)) {
                 continue;
             }
 

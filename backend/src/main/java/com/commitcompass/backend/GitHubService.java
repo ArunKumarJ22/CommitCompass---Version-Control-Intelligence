@@ -11,7 +11,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.PathVariable;
-import com.fasterxml.jackson.databind.JsonNode;
+
+
 @Service
 public class GitHubService {
 
@@ -244,5 +245,53 @@ public JsonNode getPullRequestFiles(String owner, String repo, int pullNumber) {
     }
 }
 
+
+    // Fetch CI check runs for a pull request's latest commit
+    public JsonNode getPullRequestChecks(
+            String owner, String repo, String headSha
+    ) {
+        String url = "/repos/{owner}/{repo}/commits/{ref}/check-runs";
+
+        try {
+            return restClient.get()
+                    .uri(url, owner, repo, headSha)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+        } catch (RestClientResponseException ex) {
+            int status = ex.getStatusCode().value();
+
+            if (status == 404) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Commit or repository not found.",
+                        ex
+                );
+            }
+
+            if (status == 403 || status == 429) {
+                throw new ResponseStatusException(
+                        status == 403
+                                ? HttpStatus.FORBIDDEN
+                                : HttpStatus.TOO_MANY_REQUESTS,
+                        "GitHub denied the request or the API rate limit was reached.",
+                        ex
+                );
+            }
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "GitHub check-runs request failed with status " + status + ".",
+                    ex
+            );
+
+        } catch (ResourceAccessException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Cannot connect to GitHub. Try again later.",
+                    ex
+            );
+        }
+    }
 
 }
