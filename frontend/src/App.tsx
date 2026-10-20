@@ -2,7 +2,7 @@
 
 import "./App.css";
 import ReactMarkdown from "react-markdown";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Commit {
   sha: string;
@@ -54,6 +54,241 @@ interface PullRequestCheck {
     title?: string | null;
     summary?: string | null;
   };
+}
+
+interface RegressionCandidateCommit {
+  sha: string;
+  message: string;
+  author?: string;
+  commitDate?: string;
+  htmlUrl?: string;
+  fileOverlapCount: number;
+  overlappingFiles: string[];
+  rankingExplanation?: string;
+  note?: string;
+  fileInspectionError?: string;
+}
+
+interface RegressionCheck {
+  name: string;
+  status?: string;
+  conclusion?: string | null;
+  detailsUrl?: string;
+}
+
+interface RegressionInvestigationResult {
+  repository?: string;
+  pullNumber: number;
+  headSha?: string;
+  checks: RegressionCheck[];
+  changedFiles: Array<string | PullRequestFile>;
+  candidateCommits: RegressionCandidateCommit[];
+  limitations: string[];
+}
+
+function RegressionReport({
+  result,
+}: {
+  result: RegressionInvestigationResult;
+}) {
+  return (
+   <section className="details-panel regression-report">
+    <header className="regression-report-header">
+      <div className="regression-report-icon">↗</div>
+      <div className="regression-report-heading-content">
+        <h2 className="regression-report-title">
+          Regression Investigation — PR #{result.pullNumber}
+        </h2>
+        <p>Repository: {result.repository ?? "Unknown repository"}</p>
+      </div>
+    </header>
+
+
+      {result.headSha && (
+        <div className="regression-head-commit">
+          <span>Head commit</span>
+          <code>{result.headSha}</code>
+        </div>
+      )}
+
+      <div className="regression-section">
+        <h3>
+          Changed files
+          <span className="regression-count">
+            {result.changedFiles?.length ?? 0}
+          </span>
+        </h3>
+
+        {result.changedFiles?.length ? (
+          <ul className="regression-file-list">
+            {result.changedFiles.map((file, index) => {
+              const filename =
+                typeof file === "string" ? file : file.filename;
+
+              return (
+                <li key={`${filename}-${index}`}>
+                  <span className="regression-file-name">{filename}</span>
+                  {typeof file !== "string" && (
+                    <span className="regression-file-stats">
+                      {file.status} · <span className="added">+{file.additions}</span>
+                      {" / "}
+                      <span className="removed">−{file.deletions}</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="regression-empty">No changed files reported.</p>
+        )}
+      </div>
+
+      <div className="regression-section">
+        <h3>
+          CI checks
+          <span className="regression-count">
+            {result.checks?.length ?? 0}
+          </span>
+        </h3>
+
+        {result.checks?.length ? (
+          <div className="regression-check-list">
+            {result.checks.map((check, index) => {
+              const state = String(
+                check.conclusion ?? check.status ?? "unknown"
+              ).toLowerCase();
+
+              const statusClass =
+                state.includes("success") || state === "completed"
+                  ? "success"
+                  : state.includes("failure") ||
+                      state.includes("failed") ||
+                      state.includes("error")
+                    ? "failure"
+                    : state.includes("progress") ||
+                        state.includes("queued") ||
+                        state.includes("pending")
+                      ? "pending"
+                      : "unknown";
+
+              return (
+                <div
+                  className="regression-check"
+                  key={`${check.name}-${index}`}
+                >
+                  <span className="regression-check-name">
+                    {check.name}
+                  </span>
+                  <span className={`regression-status ${statusClass}`}>
+                    {check.conclusion ?? check.status ?? "Unknown"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="regression-empty">No CI checks reported.</p>
+        )}
+      </div>
+
+      <div className="regression-section">
+        <h3>
+          Candidate commits
+          <span className="regression-count">
+            {result.candidateCommits?.length ?? 0}
+          </span>
+        </h3>
+
+        {result.candidateCommits?.length ? (
+          <div className="regression-candidate-list">
+            {result.candidateCommits.map((commit, index) => (
+              <article
+                className="regression-candidate"
+                key={`${commit.sha}-${index}`}
+              >
+                <div className="regression-candidate-header">
+                  <strong className="regression-candidate-message">
+                    {commit.message || "Commit message unavailable"}
+                  </strong>
+                  <span className="regression-overlap">
+                    {commit.fileOverlapCount} overlapping files
+                  </span>
+                </div>
+
+                <div className="regression-candidate-content">
+                  <div className="regression-meta">
+                    <span>Author: {commit.author ?? "Unknown"}</span>
+                    {commit.commitDate && (
+                      <span>
+                        {new Date(commit.commitDate).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="regression-sha">
+                    <span>Commit</span>
+                    <code>{commit.sha}</code>
+                  </div>
+
+                  {commit.overlappingFiles?.length > 0 && (
+                    <div className="regression-overlapping-files">
+                      <strong>Overlapping files</strong>
+                      <ul>
+                        {commit.overlappingFiles.map((file, fileIndex) => (
+                          <li key={`${file}-${fileIndex}`}>{file}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {commit.rankingExplanation && (
+                    <p className="regression-explanation">
+                      {commit.rankingExplanation}
+                    </p>
+                  )}
+
+                  {commit.note && (
+                    <p className="regression-note">{commit.note}</p>
+                  )}
+
+                  {commit.fileInspectionError && (
+                    <p className="error-message">
+                      {commit.fileInspectionError}
+                    </p>
+                  )}
+
+                  {commit.htmlUrl && (
+                    <a
+                      className="regression-github-link"
+                      href={commit.htmlUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View commit on GitHub ↗
+                    </a>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="regression-empty">No candidate commits were found.</p>
+        )}
+      </div>
+
+      {result.limitations?.length > 0 && (
+        <div className="regression-limitations">
+          <h3>Limitations</h3>
+          <ul>
+            {result.limitations.map((limitation, index) => (
+              <li key={`${limitation}-${index}`}>{limitation}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
 }
 
 
@@ -146,7 +381,6 @@ function App() {
   const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
   const [pullRequestsError, setPullRequestsError] = useState("");
 
-  
   const [selectedPullRequest, setSelectedPullRequest] =
   useState<PullRequest | null>(null);
 
@@ -167,11 +401,20 @@ function App() {
   const [pullRequestChecksError, setPullRequestChecksError] =
   useState("");
 
-  
+  const [regressionResult, setRegressionResult] =
+  useState<RegressionInvestigationResult | null>(null);
+
+  const [regressionLoading, setRegressionLoading] = useState(false);
+  const [regressionError, setRegressionError] = useState("");
+  const regressionRequestId = useRef(0);
+
   const [prRiskAnalysis, setPrRiskAnalysis] = useState("");
   const [prRiskLevels, setPrRiskLevels] = useState<Record<number, string>>({});
   const [prRiskLoading, setPrRiskLoading] = useState(false);
   const [prRiskError, setPrRiskError] = useState("");
+  // Prevent old requests from overwriting results for a newly selected commit.
+  const aiRequestId = useRef(0);
+  const riskRequestId = useRef(0);
 
   const [prDetailView, setPrDetailView] = useState<"files" | "checks">("files");
 
@@ -189,6 +432,8 @@ function App() {
   const [riskAnalysis, setRiskAnalysis] = useState("");
   const [riskLoading, setRiskLoading] = useState(false);
   const [riskError, setRiskError] = useState("");
+
+  const prRiskRequestId = useRef(0);
 
   const [repositoryHistory, setRepositoryHistory] = useState<
   RepositoryHistoryItem[]
@@ -368,6 +613,63 @@ function App() {
     }
   }
   
+  async function investigateRegression(pullRequest: PullRequest) {
+  const requestId = ++regressionRequestId.current;
+
+  setRegressionResult(null);
+  setRegressionError("");
+  setRegressionLoading(true);
+
+  try {
+    const params = new URLSearchParams({
+      owner: owner.trim(),
+      repo: repo.trim(),
+      pullNumber: String(pullRequest.number),
+    });
+
+    const response = await fetch(
+      `/api/github/regression/investigate?${params.toString()}`
+    );
+
+    const responseText = await response.text();
+
+    let data: RegressionInvestigationResult | string;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = responseText;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        typeof data === "string"
+          ? data
+          : `Investigation failed: HTTP ${response.status}`
+      );
+    }
+
+    if (requestId !== regressionRequestId.current) {
+      return;
+    }
+
+    setRegressionResult(data as RegressionInvestigationResult);
+  } catch (err) {
+    if (requestId !== regressionRequestId.current) {
+      return;
+    }
+
+    setRegressionError(
+      err instanceof Error
+        ? err.message
+        : "Unable to investigate this pull request."
+    );
+  } finally {
+    if (requestId === regressionRequestId.current) {
+      setRegressionLoading(false);
+    }
+  }
+}
 
   async function fetchPullRequestChecks(pullRequest: PullRequest) {
     setSelectedPullRequest(pullRequest);
@@ -408,7 +710,13 @@ function App() {
 
 
   async function fetchPullRequestFiles(pullRequest: PullRequest) {
+    prRiskRequestId.current += 1;
+
     setSelectedPullRequest(pullRequest);
+    setPrRiskAnalysis("");
+    setPrRiskError("");
+    setPrRiskLoading(false);
+    setPullRequestFiles([]);
     setPullRequestFilesError("");
     setPullRequestFilesLoading(true);
 
@@ -451,14 +759,55 @@ function App() {
       setPrRiskError("No text patches are available for this pull request.");
       return;
     }
+    
 
-    if (diff.length > 30000) {
-      setPrRiskError(
-        "This pull request's diff is too large to analyze in one request."
-      );
-      return;
-    }
+   const chunks = splitDiffIntoChunks(diff, 18000);
+  const analyses: string[] = [];
 
+for (let i = 0; i < chunks.length; i++) {
+  const response = await fetch("/api/ai/risk-analysis", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ diff: chunks[i] }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ?? `AI risk analysis failed: HTTP ${response.status}`
+    );
+  }
+
+  if (typeof data.analysis !== "string") {
+    throw new Error("The server returned an invalid risk analysis.");
+  }
+
+  analyses.push(
+    chunks.length > 1
+      ? `## Part ${i + 1} of ${chunks.length}\n\n${data.analysis}`
+      : data.analysis
+  );
+}
+
+const combinedAnalysis = analyses.join("\n\n---\n\n");
+setPrRiskAnalysis(combinedAnalysis);
+
+// Extract the risk level from the combined result.
+const riskMatch = combinedAnalysis.match(
+  /(?:overall\s+risk\s+level|risk\s+level)\s*[:\-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+) ?? combinedAnalysis.match(
+  /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:\-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+);
+
+const riskLevel = riskMatch?.[1]?.toLowerCase();
+
+if (riskLevel && selectedPullRequest) {
+  setPrRiskLevels((previous) => ({
+    ...previous,
+    [selectedPullRequest.number]: riskLevel,
+  }));
+}
     setPrRiskLoading(true);
 
     try {
@@ -516,166 +865,208 @@ function App() {
 
 
   async function fetchCommitDetails(sha: string) {
-    setDetailsLoading(true);
-    setDetailsError("");
-    setSelectedCommit(null);
+  // Invalidate any AI requests started for the previous commit.
+  aiRequestId.current += 1;
+  riskRequestId.current += 1;
 
-    try {
-      const response = await fetch(
-        `/api/github/commits/details?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}`
+  setSelectedCommit(null);
+  setDetailsLoading(true);
+  setDetailsError("");
+
+  setAiExplanation("");
+  setAiError("");
+  setAiLoading(false);
+
+  setRiskAnalysis("");
+  setRiskError("");
+  setRiskLoading(false);
+
+  setCollapsedFiles([]);
+
+  try {
+    const response = await fetch(
+      `/api/github/commits/details?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to load commit details: HTTP ${response.status}`
       );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load commit details: HTTP ${response.status}`
-        );
-      }
-
-      const data: CommitDetails = await response.json();
-      setSelectedCommit(data);
-    } catch (err) {
-      setDetailsError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load commit details."
-      );
-    } finally {
-      setDetailsLoading(false);
     }
+
+    const data: CommitDetails = await response.json();
+    setSelectedCommit(data);
+  } catch (err) {
+    setDetailsError(
+      err instanceof Error
+        ? err.message
+        : "Unable to load commit details."
+    );
+  } finally {
+    setDetailsLoading(false);
   }
+}
 
   
     async function explainSelectedCommit() {
-      if (!selectedCommit) {
-        return;
-      }
+      if (!selectedCommit) return;
+
+      const requestId = ++aiRequestId.current;
+      const commitSha = selectedCommit.sha;
 
       setAiExplanation("");
       setAiError("");
-
-      const files = selectedCommit.files ?? [];
-      const diff = files
-        .filter((file) => file.patch)
-        .map((file) => `File: ${file.filename}\n${file.patch}`)
-        .join("\n\n");
-
-      if (!diff.trim()) {
-        setAiError(
-          "No code patches are available for this commit."
-        );
-        return;
-      }
-
       setAiLoading(true);
 
       try {
-        const chunks = splitDiffIntoChunks(diff);
-        const analyses: string[] = [];
+        const files = selectedCommit.files ?? [];
+        const diff = files
+          .filter((file) => file.patch)
+          .map((file) => `File: ${file.filename}\n${file.patch}`)
+          .join("\n\n");
 
-        for (let i = 0; i < chunks.length; i++) {
-          const response = await fetch("/api/ai/risk-analysis", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ diff: chunks[i] }),
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(
-              data.error ?? `Risk analysis failed: HTTP ${response.status}`
-            );
-          }
-
-          if (typeof data.analysis !== "string") {
-            throw new Error("The server returned an invalid risk analysis.");
-          }
-
-          analyses.push(
-            `## Part ${i + 1} of ${chunks.length}\n\n${data.analysis}`
-          );
+        if (!diff.trim()) {
+          throw new Error("No code patches are available for this commit.");
         }
 
-        const combinedAnalysis = analyses.join("\n\n---\n\n");
-        setRiskAnalysis(combinedAnalysis);
+        const chunks = splitDiffIntoChunks(diff, 18000);
+        const explanations: string[] = [];
 
+        for (let i = 0; i < chunks.length; i++) {
+        if (requestId !== aiRequestId.current) return;
 
-
-// The combined risk analysis is already displayed below.
-// No separate risk-level state update is needed here.
-      } catch (err) {
-        setRiskError(
-          err instanceof Error
-            ? err.message
-            : "Unable to analyze this commit."
-        );
-      } finally {
-        setRiskLoading(false);
-      }
-    }
-
-
-    async function analyzeSelectedCommitRisk() {
-      if (!selectedCommit) return;
-
-      setRiskAnalysis("");
-      setRiskError("");
-
-      const diff = (selectedCommit.files ?? [])
-        .filter((file) => file.patch)
-        .map((file) => `File: ${file.filename}\n${file.patch}`)
-        .join("\n\n");
-
-      if (!diff.trim()) {
-        setRiskError("No code patches are available for this commit.");
-        return;
-      }
-
-      if (diff.length > 30000) {
-        setRiskError("This diff is too large to analyze.");
-        return;
-      }
-
-      setRiskLoading(true);
-
-      try {
-        const response = await fetch(
-          "/api/ai/risk-analysis",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ diff }),
-          }
-        );
+        const response = await fetch("/api/ai/explain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ diff: chunks[i] }),
+        });
 
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            data.error ?? `Risk analysis failed: HTTP ${response.status}`
+            data.error ??
+              `AI explanation failed: HTTP ${response.status}`
           );
         }
 
-        if (typeof data.analysis !== "string") {
-          throw new Error("The server returned an invalid risk analysis.");
+        const explanation =
+          data.explanation ?? data.analysis ?? data.result;
+
+        if (typeof explanation !== "string") {
+          throw new Error(
+            "The server returned an invalid AI explanation."
+          );
         }
 
-        const cleanedAnalysis = data.analysis
-          .replace(/\\([#*_`])/g, "$1")
-          .replace(/\\n/g, "\n");
+        if (requestId !== aiRequestId.current) return;
 
-        setRiskAnalysis(cleanedAnalysis);
-      } catch (err) {
-        setRiskError(
+        explanations.push(
+          chunks.length > 1
+            ? `## Part ${i + 1} of ${chunks.length}\n\n${explanation}`
+            : explanation
+        );
+      }
+
+      if (
+        requestId === aiRequestId.current &&
+        selectedCommit?.sha === commitSha
+      ) {
+        setAiExplanation(explanations.join("\n\n---\n\n"));
+      }
+    } catch (err) {
+      if (requestId === aiRequestId.current) {
+        setAiError(
           err instanceof Error
             ? err.message
-            : "Unable to analyze commit risk."
+            : "Unable to explain this commit."
         );
-      } finally {
-        setRiskLoading(false);
+      }
+    } finally {
+      if (requestId === aiRequestId.current) {
+        setAiLoading(false);
       }
     }
+  }
 
+
+    async function analyzeSelectedCommitRisk() {
+  if (!selectedCommit) return;
+
+  const requestId = ++riskRequestId.current;
+  const commitSha = selectedCommit.sha;
+
+  setRiskAnalysis("");
+  setRiskError("");
+  setRiskLoading(true);
+
+  try {
+    const diff = (selectedCommit.files ?? [])
+      .filter((file) => file.patch)
+      .map((file) => `File: ${file.filename}\n${file.patch}`)
+      .join("\n\n");
+
+    if (!diff.trim()) {
+      throw new Error("No code patches are available for this commit.");
+    }
+
+    // Analyze large diffs in smaller requests instead of rejecting them.
+    const chunks = splitDiffIntoChunks(diff, 18000);
+    const analyses: string[] = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      if (requestId !== riskRequestId.current) return;
+
+      const response = await fetch("/api/ai/risk-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ diff: chunks[i] }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ??
+            `Risk analysis failed: HTTP ${response.status}`
+        );
+      }
+
+      if (typeof data.analysis !== "string") {
+        throw new Error(
+          "The server returned an invalid risk analysis."
+        );
+      }
+
+      if (requestId !== riskRequestId.current) return;
+
+      analyses.push(
+        chunks.length > 1
+          ? `## Part ${i + 1} of ${chunks.length}\n\n${data.analysis}`
+          : data.analysis
+      );
+    }
+
+    if (
+      requestId === riskRequestId.current &&
+      selectedCommit?.sha === commitSha
+    ) {
+      setRiskAnalysis(analyses.join("\n\n---\n\n"));
+    }
+  } catch (err) {
+    if (requestId === riskRequestId.current) {
+      setRiskError(
+        err instanceof Error
+          ? err.message
+          : "Unable to analyze commit risk."
+      );
+    }
+  } finally {
+    if (requestId === riskRequestId.current) {
+      setRiskLoading(false);
+    }
+  }
+}
 
   return (
     <div className="dashboard">
@@ -1295,15 +1686,25 @@ function App() {
                     className="inspect-button"
                     type="button"
                     onClick={() => {
-  setPrDetailView("files");
-  void fetchPullRequestFiles(pr);
-}}
+                      setPrDetailView("files");
+                      void fetchPullRequestFiles(pr);
+                    }}
                   >
                     {pullRequestFilesLoading && selectedPullRequest?.number === pr.number
                       ? "Loading files..."
                       : "View changed files"}
                   </button>
-
+<button
+  className="inspect-button"
+  type="button"
+  onClick={() => {
+    setActivePage("Pull Requests");
+    void investigateRegression(pr);
+  }}
+  disabled={regressionLoading}
+>
+  {regressionLoading ? "Investigating..." : "Investigate Regression"}
+</button>
                   
                  
 <button
@@ -1697,6 +2098,22 @@ function App() {
 )}
               </div>
             )}
+            {regressionLoading && (
+  <div className="message-panel" role="status">
+    Investigating the pull request...
+  </div>
+)}
+
+{regressionError && (
+  <div className="message-panel error-message" role="alert">
+    <strong>Investigation failed</strong>
+    <p>{regressionError}</p>
+  </div>
+)}
+
+{regressionResult && (
+  <RegressionReport result={regressionResult} />
+)}
 
           </section>
           

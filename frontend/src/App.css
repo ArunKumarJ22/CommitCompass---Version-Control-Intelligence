@@ -1690,3 +1690,715 @@ input:focus-visible {
   background: #f1f5f9;
 }
 
+/* Regression Investigation report heading */
+.regression-report-title {
+  color: #172554;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+/* Keep the heading readable on smaller screens */
+@media (max-width: 640px) {
+  .regression-report-title {
+    font-size: 1.2rem;
+    line-height: 1.5;
+  }
+}
+
+/* Candidate commit cards — compact, readable layout */
+.regression-candidate {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.regression-candidate-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 16px 18px;
+  text-align: left;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.regression-candidate-message {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  color: #172554;
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.6;
+  text-align: left;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.regression-overlap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
+  border: 1px solid #dbe5ff;
+  border-radius: 7px;
+  background: #eef2ff;
+  color: #315bdb;
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.regression-candidate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  color: #475569;
+  text-align: left;
+}
+
+.regression-meta {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.regression-sha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  text-align: left;
+}
+
+.regression-overlapping-files {
+  color: #475569;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.regression-overlapping-files ul {
+  display: grid;
+  gap: 7px;
+  padding-left: 20px;
+  margin: 8px 0 0;
+  text-align: left;
+}
+
+.regression-overlapping-files li {
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.regression-explanation,
+.regression-note {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.regression-github-link {
+  align-self: flex-start;
+  color: #315bdb;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.regression-github-link:hover {
+  text-decoration: underline;
+}
+
+.regression-limitations {
+  margin-top: 28px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: left;
+}
+
+.regression-limitations h3 {
+  margin: 0 0 12px;
+  color: #172554;
+  text-align: left;
+}
+
+.regression-limitations ul {
+  display: grid;
+  gap: 10px;
+  padding-left: 20px;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.regression-limitations li {
+  padding-left: 2px;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .regression-candidate-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .regression-overlap {
+    justify-self: start;
+    white-space: normal;
+  }
+
+  .regression-candidate-content {
+    padding: 14px;
+  }
+}
+
+/* Fix Regression Report section heading layout */
+.regression-report .regression-section h3 {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 14px;
+  color: #172554;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.regression-report .regression-count {
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
+/* Keep changed-file rows readable */
+.regression-report .regression-file-list li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.regression-report .regression-file-name {
+  width: 100%;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* Prevent global styles from centering report content */
+.regression-report .regression-section,
+.regression-report .regression-check-list,
+.regression-report .regression-candidate-list {
+  text-align: left;
+}
+
+.regression-report .regression-check {
+  text-align: left;
+}
+
+.regression-report .regression-check-name {
+  flex: 1;
+}
+
+/* ==========================================
+   CommitCompass — Regression Report Layout
+   ========================================== */
+
+.details-panel.regression-report {
+  width: 100%;
+  max-width: 100%;
+  margin: 24px 0;
+  padding: 28px;
+  overflow: hidden;
+  color: #172033;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgb(15 23 42 / 4%);
+}
+
+.regression-report .regression-report-title {
+  margin: 0 0 12px;
+  color: #172554;
+  font-family: "Manrope", sans-serif;
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.6px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.regression-report > p {
+  margin: 8px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: left;
+}
+
+.regression-report > p code,
+.regression-report .regression-sha code {
+  display: inline-block;
+  max-width: 100%;
+  padding: 5px 9px;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.regression-report > h3,
+.regression-report .regression-section > h3 {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  margin: 28px 0 14px;
+  color: #172033;
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.regression-report .regression-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  min-height: 26px;
+  margin: 0;
+  padding: 3px 8px;
+  color: #315efb;
+  background: #edf2ff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.regression-report .regression-section {
+  width: 100%;
+  min-width: 0;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.regression-report .regression-file-list,
+.regression-report .regression-check-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.regression-report .regression-file-list li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px 16px;
+  color: #334155;
+  background: #f8faff;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.regression-report .regression-file-name {
+  width: 100%;
+  color: #334155;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.regression-report .regression-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.regression-report .regression-check-name {
+  flex: 1;
+  min-width: 0;
+  color: #334155;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.regression-report .regression-candidate-list {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.regression-report .regression-candidate {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.regression-report .regression-candidate-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 16px 18px;
+  text-align: left;
+  background: #f8faff;
+  border-bottom: 1px solid #e5eaf2;
+}
+
+.regression-report .regression-candidate-message {
+  min-width: 0;
+  color: #172554;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.65;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.regression-report .regression-overlap {
+  align-self: start;
+  padding: 6px 9px;
+  color: #315bdb;
+  background: #edf2ff;
+  border: 1px solid #dbe5ff;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: normal;
+}
+
+.regression-report .regression-candidate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px;
+  color: #475569;
+  text-align: left;
+}
+
+.regression-report .regression-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px 18px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: left;
+}
+
+.regression-report .regression-sha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  text-align: left;
+}
+
+.regression-report .regression-overlapping-files {
+  color: #475569;
+  font-size: 13px;
+  text-align: left;
+}
+
+.regression-report .regression-overlapping-files ul {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+  text-align: left;
+}
+
+.regression-report .regression-explanation,
+.regression-report .regression-note {
+  margin: 0;
+  padding: 12px 14px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.regression-report .regression-github-link {
+  align-self: flex-start;
+  color: #315efb;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.regression-report .regression-github-link:hover {
+  text-decoration: underline;
+}
+
+.regression-report .regression-limitations {
+  margin-top: 26px;
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.regression-report .regression-limitations h3 {
+  margin: 0 0 12px;
+  color: #172554;
+  font-size: 16px;
+  text-align: left;
+}
+
+.regression-report .regression-limitations ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+  color: #64748b;
+  line-height: 1.7;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .details-panel.regression-report {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .regression-report .regression-candidate-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .regression-report .regression-candidate-content {
+    padding: 14px;
+  }
+
+  .regression-report .regression-check {
+    align-items: flex-start;
+  }
+}
+
+/* Regression report — final layout polish */
+
+.regression-report .regression-report-title {
+  display: block;
+  margin: 0 0 14px;
+  color: #172554;
+  font-size: clamp(21px, 2vw, 26px);
+  line-height: 1.4;
+  text-align: left;
+}
+
+.regression-report .regression-report-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e8edf5;
+}
+
+.regression-report .regression-report-icon {
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #edf2ff;
+  color: #315efb;
+  font-size: 20px;
+}
+
+.regression-report .regression-report-heading-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.regression-report .regression-report-heading-content > p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.regression-report .regression-section {
+  margin-top: 26px;
+}
+
+.regression-report .regression-section > h3 {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: #172033;
+  font-size: 18px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.regression-report .regression-count {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  margin: 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: #edf2ff;
+  color: #315efb;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.regression-report .regression-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.regression-report .regression-check-name {
+  flex: 1;
+  min-width: 0;
+  color: #334155;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.regression-report .ci-status {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.regression-report .ci-passed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.regression-report .ci-failed {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.regression-report .ci-running {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.regression-report .ci-neutral {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.regression-report .regression-candidate-list {
+  display: grid;
+  gap: 14px;
+}
+
+.regression-report .regression-candidate-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.regression-report .regression-limitations {
+  margin-top: 28px;
+}
+
+@media (max-width: 640px) {
+  .regression-report .regression-report-header {
+    gap: 10px;
+  }
+
+  .regression-report .regression-candidate-header {
+    grid-template-columns: 1fr;
+  }
+
+  .regression-report .regression-check {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
