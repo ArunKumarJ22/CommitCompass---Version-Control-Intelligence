@@ -474,10 +474,52 @@ function App() {
     return [];
   }
   });
+  async function fetchRepositoryHistory() {
+      try {
+        const response = await fetch(
+          "/api/repositories/history"
+        );
 
-  useEffect(() => {
-    void fetchRepositoryHistory();
-  }, []);
+        if (!response.ok) {
+          throw new Error("Failed to load repository history.");
+        }
+
+        const data: RepositoryHistoryItem[] = await response.json();
+        setRepositoryHistory(data);
+      } catch (err) {
+        console.error("Repository history error:", err);
+      }
+    }
+
+ useEffect(() => {
+  let cancelled = false;
+
+  async function loadHistory() {
+    try {
+      const response = await fetch("/api/repositories/history");
+
+      if (!response.ok) {
+        throw new Error("Failed to load repository history.");
+      }
+
+      const data: RepositoryHistoryItem[] = await response.json();
+
+      if (!cancelled) {
+        setRepositoryHistory(data);
+      }
+    } catch (err) {
+      if (!cancelled) {
+        console.error("Repository history error:", err);
+      }
+    }
+  }
+
+  void loadHistory();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
 
   async function fetchCommits(
@@ -589,22 +631,7 @@ function App() {
       }
 
       
-    async function fetchRepositoryHistory() {
-      try {
-        const response = await fetch(
-          "/api/repositories/history"
-        );
 
-        if (!response.ok) {
-          throw new Error("Failed to load repository history.");
-        }
-
-        const data: RepositoryHistoryItem[] = await response.json();
-        setRepositoryHistory(data);
-      } catch (err) {
-        console.error("Repository history error:", err);
-      }
-    }
 
   async function fetchPullRequests() {
     setPullRequestsLoading(true);
@@ -824,9 +851,9 @@ setPrRiskAnalysis(combinedAnalysis);
 
 // Extract the risk level from the combined result.
 const riskMatch = combinedAnalysis.match(
-  /(?:overall\s+risk\s+level|risk\s+level)\s*[:\-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+  /(?:overall\s+risk\s+level|risk\s+level)\s[:-]?s*(?:\*{1,2})?\s*(low|medium|high)\b/i
 ) ?? combinedAnalysis.match(
-  /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:\-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+  /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
 );
 
 const riskLevel = riskMatch?.[1]?.toLowerCase();
@@ -864,9 +891,9 @@ if (riskLevel && selectedPullRequest) {
       setPrRiskAnalysis(data.analysis);
       
       const riskMatch = data.analysis.match(
-        /(?:overall\s+risk\s+level|risk\s+level)\s*[:\-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+        /(?:overall\s+risk\s+level|risk\s+level)\s*[:-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
       ) ?? data.analysis.match(
-        /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:\-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+        /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
       );
 
       const riskLevel = riskMatch?.[1]?.toLowerCase();
@@ -1999,9 +2026,9 @@ if (riskLevel && selectedPullRequest) {
                       {(() => {
                         
                     const match = prRiskAnalysis.match(
-                      /(?:overall\s+risk\s+level|risk\s+level)\s*[:\-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+                      /(?:overall\s+risk\s+level|risk\s+level)\s*[:-]?\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
                     ) ?? prRiskAnalysis.match(
-                      /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:\-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
+                      /(?:#{1,6}\s*)?(?:\*{1,2})?overall\s+risk\s+level(?:\*{1,2})?\s*[:-]?\s*\n+\s*(?:\*{1,2})?\s*(low|medium|high)\b/i
                     );
                     const riskLevel = match?.[1]?.toLowerCase();
 
