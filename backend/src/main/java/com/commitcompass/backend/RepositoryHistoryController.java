@@ -13,7 +13,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/repositories/history")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "https://commitcompass-frontend.onrender.com"
+})
 public class RepositoryHistoryController {
 
     private final RepositoryHistoryService historyService;

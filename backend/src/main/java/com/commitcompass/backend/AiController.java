@@ -15,7 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/ai")
 @CrossOrigin(origins = {
     "http://localhost:5173",
-    "http://localhost:8080"
+    "http://localhost:8080",
+    "https://commitcompass-frontend.onrender.com"
 })
 public class AiController {
 

@@ -18,7 +18,11 @@
 
 
         @RestController
-        @CrossOrigin(origins = "http://localhost:5173")
+        @CrossOrigin(origins = {
+                "http://localhost:5173",
+                "http://localhost:8080",
+                "https://commitcompass-frontend.onrender.com"
+                })
         public class GitHubController {
 
            private final GitHubService gitHubService;
