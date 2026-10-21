@@ -4,6 +4,7 @@ import "./App.css";
 import ReactMarkdown from "react-markdown";
 import { useEffect, useRef, useState } from "react";
 
+
 interface Commit {
   sha: string;
   html_url: string;
@@ -86,23 +87,30 @@ interface RegressionInvestigationResult {
   limitations: string[];
 }
 
+
 function RegressionReport({
   result,
 }: {
   result: RegressionInvestigationResult;
 }) {
-  return (
-   <section className="details-panel regression-report">
-    <header className="regression-report-header">
-      <div className="regression-report-icon">↗</div>
-      <div className="regression-report-heading-content">
-        <h2 className="regression-report-title">
-          Regression Investigation — PR #{result.pullNumber}
-        </h2>
-        <p>Repository: {result.repository ?? "Unknown repository"}</p>
-      </div>
-    </header>
+  const [showAllCandidates, setShowAllCandidates] = useState(false);
 
+  const candidates = result.candidateCommits ?? [];
+  const visibleCandidates = showAllCandidates
+    ? candidates
+    : candidates.slice(0, 5);
+
+  return (
+    <section className="details-panel regression-report">
+      <header className="regression-report-header">
+        <div className="regression-report-icon">↗</div>
+        <div className="regression-report-heading-content">
+          <h2 className="regression-report-title">
+            Regression Investigation — PR #{result.pullNumber}
+          </h2>
+          <p>Repository: {result.repository ?? "Unknown repository"}</p>
+        </div>
+      </header>
 
       {result.headSha && (
         <div className="regression-head-commit">
@@ -130,7 +138,8 @@ function RegressionReport({
                   <span className="regression-file-name">{filename}</span>
                   {typeof file !== "string" && (
                     <span className="regression-file-stats">
-                      {file.status} · <span className="added">+{file.additions}</span>
+                      {file.status} ·{" "}
+                      <span className="added">+{file.additions}</span>
                       {" / "}
                       <span className="removed">−{file.deletions}</span>
                     </span>
@@ -195,85 +204,105 @@ function RegressionReport({
       <div className="regression-section">
         <h3>
           Candidate commits
-          <span className="regression-count">
-            {result.candidateCommits?.length ?? 0}
-          </span>
+          <span className="regression-count">{candidates.length}</span>
         </h3>
 
-        {result.candidateCommits?.length ? (
-          <div className="regression-candidate-list">
-            {result.candidateCommits.map((commit, index) => (
-              <article
-                className="regression-candidate"
-                key={`${commit.sha}-${index}`}
-              >
-                <div className="regression-candidate-header">
-                  <strong className="regression-candidate-message">
-                    {commit.message || "Commit message unavailable"}
-                  </strong>
-                  <span className="regression-overlap">
-                    {commit.fileOverlapCount} overlapping files
-                  </span>
-                </div>
+        {candidates.length > 0 ? (
+          <>
+            <div className="regression-candidate-list">
+              {visibleCandidates.map((commit, index) => (
+                <article
+                  className="regression-candidate"
+                  key={`${commit.sha}-${index}`}
+                >
+                  <div className="regression-candidate-header">
+                    <strong className="regression-candidate-message">
+                      {commit.message || "Commit message unavailable"}
+                    </strong>
+                    <span className="regression-overlap">
+                      {commit.fileOverlapCount} overlapping files
+                    </span>
+                  </div>
 
-                <div className="regression-candidate-content">
-                  <div className="regression-meta">
-                    <span>Author: {commit.author ?? "Unknown"}</span>
-                    {commit.commitDate && (
-                      <span>
-                        {new Date(commit.commitDate).toLocaleString()}
-                      </span>
+                  <div className="regression-candidate-content">
+                    <div className="regression-meta">
+                      <span>Author: {commit.author ?? "Unknown"}</span>
+                      {commit.commitDate && (
+                        <span>
+                          {new Date(commit.commitDate).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="regression-sha">
+                      <span>Commit</span>
+                      <code>{commit.sha}</code>
+                    </div>
+
+                    {commit.overlappingFiles?.length > 0 && (
+                      <div className="regression-overlapping-files">
+                        <strong>Overlapping files</strong>
+                        <ul>
+                          {commit.overlappingFiles.map((file, fileIndex) => (
+                            <li key={`${file}-${fileIndex}`}>{file}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {commit.rankingExplanation && (
+                      <p className="regression-explanation">
+                        {commit.rankingExplanation}
+                      </p>
+                    )}
+
+                    {commit.note && (
+                      <p className="regression-note">{commit.note}</p>
+                    )}
+
+                    {commit.fileInspectionError && (
+                      <p className="error-message">
+                        {commit.fileInspectionError}
+                      </p>
+                    )}
+
+                    {commit.htmlUrl && (
+                      <a
+                        className="regression-github-link"
+                        href={commit.htmlUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View commit on GitHub ↗
+                      </a>
                     )}
                   </div>
+                </article>
+              ))}
+            </div>
 
-                  <div className="regression-sha">
-                    <span>Commit</span>
-                    <code>{commit.sha}</code>
-                  </div>
-
-                  {commit.overlappingFiles?.length > 0 && (
-                    <div className="regression-overlapping-files">
-                      <strong>Overlapping files</strong>
-                      <ul>
-                        {commit.overlappingFiles.map((file, fileIndex) => (
-                          <li key={`${file}-${fileIndex}`}>{file}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {commit.rankingExplanation && (
-                    <p className="regression-explanation">
-                      {commit.rankingExplanation}
-                    </p>
-                  )}
-
-                  {commit.note && (
-                    <p className="regression-note">{commit.note}</p>
-                  )}
-
-                  {commit.fileInspectionError && (
-                    <p className="error-message">
-                      {commit.fileInspectionError}
-                    </p>
-                  )}
-
-                  {commit.htmlUrl && (
-                    <a
-                      className="regression-github-link"
-                      href={commit.htmlUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View commit on GitHub ↗
-                    </a>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
+            {candidates.length > 5 && (
+              <button
+                type="button"
+                className="regression-show-more"
+                onClick={() =>
+                  setShowAllCandidates((previous) => !previous)
+                }
+                aria-expanded={showAllCandidates}
+              >
+                {showAllCandidates
+                  ? "Show fewer commits"
+                  : `Show all ${candidates.length} commits`}
+                <span aria-hidden="true">
+                  {showAllCandidates ? " ↑" : " ↓"}
+                </span>
+              </button>
+            )}
+          </>
         ) : (
-          <p className="regression-empty">No candidate commits were found.</p>
+          <p className="regression-empty">
+            No candidate commits were found.
+          </p>
         )}
       </div>
 

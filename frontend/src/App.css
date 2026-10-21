@@ -2402,3 +2402,34 @@ input:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+
+.regression-show-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 18px;
+  border: 1px solid #dbe5ff;
+  border-radius: 10px;
+  background: #f8faff;
+  color: #315bdb;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.regression-show-more:hover {
+  background: #edf2ff;
+  border-color: #b8c8ff;
+}
+
+.regression-show-more:focus-visible {
+  outline: 3px solid #93b4ff;
+  outline-offset: 3px;
+}
+
+
